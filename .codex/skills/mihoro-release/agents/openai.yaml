@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mihoro Release"
+  short_description: "mihoro-cli 项目专属版本发布流程"
+  default_prompt: "Use $mihoro-release to publish a new mihoro-cli version."
