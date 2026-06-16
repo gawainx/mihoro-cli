@@ -21,7 +21,7 @@ import {
 import { importClashPartyConfig } from './import/clash-party.js'
 import { showInfo } from './info.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
-import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
+import { ensureGeodataResources } from './mihomo/geodata.js'
 import { packageInfo } from './lib/package-info.js'
 
 /**
@@ -57,10 +57,8 @@ function parseOnOff(value: string): boolean {
 async function restartOrStartMihomo(): Promise<{ pid: number; restarted: boolean }> {
   const status = await serviceStatus()
   if (status.startsWith('running ')) {
-    console.log('restarting mihomo to apply runtime config')
     return { pid: await restartServiceProcess(), restarted: true }
   }
-  console.log('starting mihomo')
   return { pid: await startServiceProcess(), restarted: false }
 }
 
@@ -77,9 +75,14 @@ function createProgram(): Command {
   sub.command('list').description('List subscriptions').action(() =>
     run(async () => {
       const state = await readSubscriptions()
+      if (state.items.length === 0) {
+        console.log('No subscriptions are configured.')
+        return
+      }
+      console.log(`Configured subscriptions: ${state.items.length}`)
       for (const item of state.items) {
         const marker = state.current === item.id ? '*' : ' '
-        console.log(`${marker} ${item.id}\t${item.name}\t${item.updatedAt}`)
+        console.log(`${marker} ${item.id}\tname=${item.name}\tupdated=${item.updatedAt}`)
       }
     })
   )
@@ -87,30 +90,46 @@ function createProgram(): Command {
     run(async () => {
       const item = await addSubscription(name, url)
       const runtimePath = await generateRuntimeConfig()
-      console.log(`added ${item.id}`)
-      console.log(`runtime ${runtimePath}`)
+      console.log(`Subscription saved: ${item.name} (${item.id})`)
+      console.log(`Runtime config regenerated: ${runtimePath}`)
     })
   )
   sub.command('remove').argument('<name-or-id>').description('Remove a subscription').action((nameOrId: string) =>
     run(async () => {
       const item = await removeSubscription(nameOrId)
-      console.log(`removed ${item.id}`)
+      console.log(`Subscription removed: ${item.name} (${item.id})`)
     })
   )
   sub.command('use').argument('<name-or-id>').description('Use a subscription').action((nameOrId: string) =>
     run(async () => {
       const item = await useSubscription(nameOrId)
       const runtimePath = await generateRuntimeConfig()
-      console.log(`current ${item.id}`)
-      console.log(`runtime ${runtimePath}`)
+      console.log(`Active subscription set: ${item.name} (${item.id})`)
+      console.log(`Runtime config regenerated: ${runtimePath}`)
     })
   )
 
   const service = program.command('service').description('Manage mihomo service')
-  service.command('install').description('Install autostart service').action(() => run(async () => console.log(await installService())))
-  service.command('start').description('Start mihomo').action(() => run(async () => console.log(await startService())))
-  service.command('stop').description('Stop mihomo').action(() => run(async () => console.log(await stopService())))
-  service.command('status').description('Show mihomo status').action(() => run(async () => console.log(await serviceStatus())))
+  service.command('install').description('Install autostart service').action(() =>
+    run(async () => {
+      console.log(`Autostart service installed: ${await installService()}`)
+    })
+  )
+  service.command('start').description('Start mihomo').action(() =>
+    run(async () => {
+      console.log(`Service start result: ${await startService()}`)
+    })
+  )
+  service.command('stop').description('Stop mihomo').action(() =>
+    run(async () => {
+      console.log(`Service stop result: ${await stopService()}`)
+    })
+  )
+  service.command('status').description('Show mihomo status').action(() =>
+    run(async () => {
+      console.log(`Service status: ${await serviceStatus()}`)
+    })
+  )
 
   program.command('info').description('Show current mihoro and mihomo info').action(() => run(async () => console.log(await showInfo())))
 
@@ -122,58 +141,66 @@ function createProgram(): Command {
     .action((options: { kind: string }) =>
       run(async () => {
         const kind = parseProxyModeKind(options.kind)
-        console.log(`proxy mode ${kind}`)
         await setProxyMode(kind)
-        console.log(`runtime ${await generateRuntimeConfig()}`)
+        console.log(`Proxy routing mode saved: ${kind}`)
+        console.log(`Runtime config regenerated: ${await generateRuntimeConfig()}`)
         const { pid, restarted } = await restartOrStartMihomo()
-        console.log(restarted ? formatRestartedService(pid) : formatStartedService(pid))
-        console.log(await serviceProxyPortReady(pid))
-        console.log(await enableSystemProxy())
+        console.log(`Mihomo ${restarted ? 'restarted' : 'started'}: ${restarted ? formatRestartedService(pid) : formatStartedService(pid)}`)
+        console.log(`Proxy listener verified: ${await serviceProxyPortReady(pid)}`)
+        console.log(`System proxy updated: ${await enableSystemProxy()}`)
       })
     )
-  proxy.command('disable').description('Disable system proxy').action(() => run(async () => console.log(await disableSystemProxy())))
+  proxy.command('disable').description('Disable system proxy').action(() =>
+    run(async () => {
+      console.log(`System proxy disabled: ${await disableSystemProxy()}`)
+    })
+  )
 
   const tun = program.command('tun').description('Manage TUN config')
   tun.command('enable').description('Enable TUN').action(() =>
     run(async () => {
       await setTunEnabled(true)
-      console.log(`runtime ${await generateRuntimeConfig()}`)
+      console.log('TUN mode saved: enabled')
+      console.log(`Runtime config regenerated: ${await generateRuntimeConfig()}`)
     })
   )
   tun.command('disable').description('Disable TUN').action(() =>
     run(async () => {
       await setTunEnabled(false)
-      console.log(`runtime ${await generateRuntimeConfig()}`)
+      console.log('TUN mode saved: disabled')
+      console.log(`Runtime config regenerated: ${await generateRuntimeConfig()}`)
     })
   )
 
   const geo = program.command('geo').description('Manage db-mode GeoData resources')
   geo.command('prepare').description('Download missing GeoData database files').action(() =>
     run(async () => {
-      await ensureGeodataResources()
-      for (const item of listGeodataResources()) console.log(`${item.fileName}\tready`)
+      const resources = await ensureGeodataResources()
+      const downloaded = resources.filter((item) => item.downloaded).length
+      console.log(`GeoData resources ready: ${resources.length} files (${downloaded} downloaded)`)
+      for (const item of resources) console.log(`${item.fileName}\t${item.downloaded ? 'downloaded' : 'already-present'}\t${item.path}`)
     })
   )
   geo.command('update').description('Ask running mihomo to update GeoData databases').action(() =>
     run(async () => {
       await upgradeGeo()
-      console.log('geodata update requested')
+      console.log('GeoData update requested from running mihomo API.')
     })
   )
   geo.command('auto').argument('<on|off>').description('Enable or disable mihomo GeoData auto update').action((value: string) =>
     run(async () => {
       const enabled = parseOnOff(value)
       await setGeoAutoUpdate(enabled)
-      console.log(`geo auto ${enabled ? 'on' : 'off'}`)
-      console.log(`runtime ${await generateRuntimeConfig()}`)
+      console.log(`GeoData auto update saved: ${enabled ? 'enabled' : 'disabled'}`)
+      console.log(`Runtime config regenerated: ${await generateRuntimeConfig()}`)
     })
   )
   geo.command('interval').argument('<hours>').description('Set mihomo GeoData update interval in hours').action((hours: string) =>
     run(async () => {
       const parsed = Number(hours)
       await setGeoUpdateInterval(parsed)
-      console.log(`geo interval ${parsed}h`)
-      console.log(`runtime ${await generateRuntimeConfig()}`)
+      console.log(`GeoData update interval saved: ${parsed}h`)
+      console.log(`Runtime config regenerated: ${await generateRuntimeConfig()}`)
     })
   )
   geo.command('urls').description('Show configured GeoData update URLs').action(() =>
@@ -183,6 +210,7 @@ function createProgram(): Command {
       if (!geoxUrl || typeof geoxUrl !== 'object' || Array.isArray(geoxUrl)) {
         throw new MihoroError('GeoData URLs are not configured.')
       }
+      console.log('Configured GeoData update URLs:')
       for (const [key, value] of Object.entries(geoxUrl)) console.log(`${key}\t${String(value)}`)
     })
   )
@@ -190,7 +218,13 @@ function createProgram(): Command {
   const node = program.command('node').description('Manage nodes')
   node.command('list').description('List available nodes').action(() =>
     run(async () => {
-      for (const item of await listNodesWithGroups()) console.log(`${item.name}\t${item.type || ''}\t${item.groups.join(',')}`)
+      const nodes = await listNodesWithGroups()
+      if (nodes.length === 0) {
+        console.log('No selectable nodes are available from the running mihomo API.')
+        return
+      }
+      console.log(`Selectable nodes: ${nodes.length}`)
+      for (const item of nodes) console.log(`${item.name}\ttype=${item.type || 'unknown'}\tgroups=${item.groups.join(',') || 'none'}`)
     })
   )
   node
@@ -203,22 +237,29 @@ function createProgram(): Command {
         await assertGroupCanUseNode(options.group, nodeName)
         await useGroupNode(options.group, nodeName)
         await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [options.group]: nodeName } }))
-        console.log(`selected ${options.group} -> ${nodeName}`)
-        console.log(`saved default node for ${options.group}`)
+        console.log(`Proxy group switched: ${options.group} -> ${nodeName}`)
+        console.log(`Default node saved for future starts: ${options.group} -> ${nodeName}`)
       })
     )
 
   const group = program.command('group').description('Manage proxy groups')
   group.command('list').description('List proxy groups').action(() =>
     run(async () => {
-      for (const item of await listGroups()) console.log(`${item.name}\t${item.now || ''}\t${item.all?.join(',') || ''}`)
+      const groups = await listGroups()
+      if (groups.length === 0) {
+        console.log('No visible proxy groups are available from the running mihomo API.')
+        return
+      }
+      console.log(`Visible proxy groups: ${groups.length}`)
+      for (const item of groups) console.log(`${item.name}\tselected=${item.now || 'unknown'}\toptions=${item.all?.join(',') || 'none'}`)
     })
   )
   group.command('use').argument('<group>').argument('<node>').description('Switch proxy group node').action((groupName: string, nodeName: string) =>
     run(async () => {
       await useGroupNode(groupName, nodeName)
       await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [groupName]: nodeName } }))
-      console.log(`selected ${groupName} -> ${nodeName}`)
+      console.log(`Proxy group switched: ${groupName} -> ${nodeName}`)
+      console.log(`Default node saved for future starts: ${groupName} -> ${nodeName}`)
     })
   )
 
@@ -231,12 +272,12 @@ function createProgram(): Command {
     .action((dataDir: string, options: { overwrite?: boolean }) =>
       run(async () => {
         const result = await importClashPartyConfig(dataDir, { overwrite: Boolean(options.overwrite) })
-        console.log(`imported profiles: ${result.importedProfiles}`)
-        console.log(`current profile: ${result.current}`)
-        if (result.controlledConfigPath) console.log(`controlled config: ${result.controlledConfigPath}`)
-        console.log(`runtime ${result.runtimePath}`)
-        if (result.backupDir) console.log(`backup ${result.backupDir}`)
-        if (result.skippedProfiles.length > 0) console.log(`skipped profiles: ${result.skippedProfiles.join(',')}`)
+        console.log(`Clash Party profiles imported: ${result.importedProfiles}`)
+        console.log(`Active imported profile: ${result.current}`)
+        if (result.controlledConfigPath) console.log(`Controlled mihomo config imported: ${result.controlledConfigPath}`)
+        console.log(`Runtime config regenerated: ${result.runtimePath}`)
+        if (result.backupDir) console.log(`Existing mihoro files backed up: ${result.backupDir}`)
+        if (result.skippedProfiles.length > 0) console.log(`Skipped missing Clash Party profiles: ${result.skippedProfiles.join(',')}`)
       })
     )
 

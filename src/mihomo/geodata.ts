@@ -5,11 +5,18 @@ import { pipeline } from 'node:stream/promises'
 import { geodataDir } from '../lib/paths.js'
 import { MihoroError } from '../lib/errors.js'
 
-interface GeodataResource {
+export interface GeodataResource {
   /** File name mihomo expects in its work directory. */
   fileName: string
   /** Remote URL used when the local database file is missing. */
   url: string
+}
+
+export interface GeodataResourceStatus extends GeodataResource {
+  /** Absolute local path of the resource file. */
+  path: string
+  /** Whether the command downloaded the resource during this run. */
+  downloaded: boolean
 }
 
 const geodataResources: GeodataResource[] = [
@@ -30,13 +37,15 @@ const geodataResources: GeodataResource[] = [
 /**
  * Ensures db-mode GeoData resource files exist before mihomo starts.
  *
- * @returns Nothing after all missing resources are downloaded.
+ * @returns Resource states after all missing resources are available.
  */
-export async function ensureGeodataResources(): Promise<void> {
+export async function ensureGeodataResources(): Promise<GeodataResourceStatus[]> {
   await mkdir(geodataDir(), { recursive: true })
+  const statuses: GeodataResourceStatus[] = []
   for (const resource of geodataResources) {
-    await ensureGeodataResource(resource)
+    statuses.push(await ensureGeodataResource(resource))
   }
+  return statuses
 }
 
 /**
@@ -52,12 +61,13 @@ export function listGeodataResources(): GeodataResource[] {
  * Downloads one resource only when the target file is missing.
  *
  * @param resource GeoData resource metadata.
- * @returns Nothing after the resource exists locally.
+ * @returns Resource state after the file exists locally.
  */
-async function ensureGeodataResource(resource: GeodataResource): Promise<void> {
+async function ensureGeodataResource(resource: GeodataResource): Promise<GeodataResourceStatus> {
   const targetPath = path.join(geodataDir(), resource.fileName)
-  if (existsSync(targetPath)) return
+  if (existsSync(targetPath)) return { ...resource, path: targetPath, downloaded: false }
   await downloadResource(resource.url, targetPath)
+  return { ...resource, path: targetPath, downloaded: true }
 }
 
 /**

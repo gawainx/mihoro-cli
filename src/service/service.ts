@@ -91,7 +91,7 @@ export async function startServiceProcess(): Promise<number> {
  * @returns Human-readable start result.
  */
 export function formatStartedService(pid: number): string {
-  return `started mihomo pid=${pid}`
+  return `mihomo process pid=${pid}`
 }
 
 /**
@@ -101,7 +101,7 @@ export function formatStartedService(pid: number): string {
  * @returns Human-readable restart result.
  */
 export function formatRestartedService(pid: number): string {
-  return `restarted mihomo pid=${pid}`
+  return `mihomo process pid=${pid}`
 }
 
 /**
