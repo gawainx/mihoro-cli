@@ -1,12 +1,119 @@
 #!/usr/bin/env node
 
+import { Command } from 'commander'
+import { addSubscription, readSubscriptions, removeSubscription, useSubscription } from './config/subscriptions.js'
+import { generateRuntimeConfig } from './config/runtime.js'
+import { setTunEnabled } from './config/controlled.js'
+import { listGroups, listNodes, useGroupNode } from './mihomo/api.js'
+import { updateConfig } from './config/state.js'
+import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
+import { installService, serviceLogs, serviceStatus, startService, stopService } from './service/service.js'
+import { errorMessage, MihoroError } from './lib/errors.js'
+
 /**
- * Starts the mihoro-cli command line entrypoint.
+ * Runs an async command handler with consistent CLI error handling.
  *
- * @returns Nothing. The process writes a placeholder message for the project skeleton.
+ * @param handler Async command body.
+ * @returns Nothing after the handler completes.
  */
-function main(): void {
-  console.log('mihoro-cli project skeleton')
+function run(handler: () => Promise<void>): void {
+  handler().catch((error: unknown) => {
+    console.error(errorMessage(error))
+    process.exit(error instanceof MihoroError ? error.exitCode : 1)
+  })
 }
 
-main()
+/**
+ * Creates the mihoro-cli command tree.
+ *
+ * @returns Configured commander program.
+ */
+function createProgram(): Command {
+  const program = new Command()
+  program.name('mihoro-cli').description('Standalone mihomo CLI based on the Clash Party runtime model').version('0.1.0')
+
+  const sub = program.command('sub').description('Manage subscriptions')
+  sub.command('list').description('List subscriptions').action(() =>
+    run(async () => {
+      const state = await readSubscriptions()
+      for (const item of state.items) {
+        const marker = state.current === item.id ? '*' : ' '
+        console.log(`${marker} ${item.id}\t${item.name}\t${item.updatedAt}`)
+      }
+    })
+  )
+  sub.command('add').argument('<name>').argument('<url>').description('Add a subscription').action((name: string, url: string) =>
+    run(async () => {
+      const item = await addSubscription(name, url)
+      const runtimePath = await generateRuntimeConfig()
+      console.log(`added ${item.id}`)
+      console.log(`runtime ${runtimePath}`)
+    })
+  )
+  sub.command('remove').argument('<name-or-id>').description('Remove a subscription').action((nameOrId: string) =>
+    run(async () => {
+      const item = await removeSubscription(nameOrId)
+      console.log(`removed ${item.id}`)
+    })
+  )
+  sub.command('use').argument('<name-or-id>').description('Use a subscription').action((nameOrId: string) =>
+    run(async () => {
+      const item = await useSubscription(nameOrId)
+      const runtimePath = await generateRuntimeConfig()
+      console.log(`current ${item.id}`)
+      console.log(`runtime ${runtimePath}`)
+    })
+  )
+
+  const service = program.command('service').description('Manage mihomo service')
+  service.command('install').description('Install autostart service').action(() => run(async () => console.log(await installService())))
+  service.command('start').description('Start mihomo').action(() => run(async () => console.log(await startService())))
+  service.command('stop').description('Stop mihomo').action(() => run(async () => console.log(await stopService())))
+  service.command('status').description('Show mihomo status').action(() => run(async () => console.log(await serviceStatus())))
+  service.command('logs').option('-n, --lines <lines>', 'number of trailing lines', '80').description('Show mihomo logs').action((options: { lines: string }) =>
+    run(async () => console.log(await serviceLogs(Number(options.lines))))
+  )
+
+  const proxy = program.command('proxy').description('Manage system proxy')
+  proxy.command('enable').description('Enable system proxy').action(() => run(async () => console.log(await enableSystemProxy())))
+  proxy.command('disable').description('Disable system proxy').action(() => run(async () => console.log(await disableSystemProxy())))
+
+  const tun = program.command('tun').description('Manage TUN config')
+  tun.command('enable').description('Enable TUN').action(() =>
+    run(async () => {
+      await setTunEnabled(true)
+      console.log(`runtime ${await generateRuntimeConfig()}`)
+    })
+  )
+  tun.command('disable').description('Disable TUN').action(() =>
+    run(async () => {
+      await setTunEnabled(false)
+      console.log(`runtime ${await generateRuntimeConfig()}`)
+    })
+  )
+
+  const node = program.command('node').description('Manage nodes')
+  node.command('list').description('List available nodes').action(() =>
+    run(async () => {
+      for (const item of await listNodes()) console.log(`${item.name}\t${item.type || ''}`)
+    })
+  )
+
+  const group = program.command('group').description('Manage proxy groups')
+  group.command('list').description('List proxy groups').action(() =>
+    run(async () => {
+      for (const item of await listGroups()) console.log(`${item.name}\t${item.now || ''}\t${item.all?.join(',') || ''}`)
+    })
+  )
+  group.command('use').argument('<group>').argument('<node>').description('Switch proxy group node').action((groupName: string, nodeName: string) =>
+    run(async () => {
+      await useGroupNode(groupName, nodeName)
+      await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [groupName]: nodeName } }))
+      console.log(`selected ${groupName} -> ${nodeName}`)
+    })
+  )
+
+  return program
+}
+
+createProgram().parse()
