@@ -1,4 +1,4 @@
-Include AGENTS.local.md
+开始工作前，必须阅读 AGENTS.local.md
 
 本项目的目标是实现参考 clash-party 实现一个纯命令行代理程序。
 
