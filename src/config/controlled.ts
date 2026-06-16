@@ -1,6 +1,7 @@
 import { controlledConfigPath } from '../lib/paths.js'
 import type { JsonMap } from '../lib/types.js'
 import { readYaml, writeYaml } from '../lib/yaml.js'
+import { MihoroError } from '../lib/errors.js'
 
 const defaultControlledConfig: JsonMap = {
   'mixed-port': 7890,
@@ -19,6 +20,14 @@ const defaultControlledConfig: JsonMap = {
     'auto-route': true,
     'auto-detect-interface': true,
     'dns-hijack': ['any:53']
+  },
+  'geodata-mode': false,
+  'geo-auto-update': false,
+  'geo-update-interval': 24,
+  'geox-url': {
+    geoip: 'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb',
+    mmdb: 'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country-lite.mmdb',
+    asn: 'https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb'
   }
 }
 
@@ -54,6 +63,37 @@ export async function setTunEnabled(enabled: boolean): Promise<JsonMap> {
   const dns = typeof config.dns === 'object' && config.dns ? (config.dns as JsonMap) : {}
   config.tun = { ...tun, enable: enabled }
   if (enabled) config.dns = { ...dns, enable: true }
+  await writeControlledConfig(config)
+  return config
+}
+
+/**
+ * Enables or disables mihomo GeoData auto updates.
+ *
+ * @param enabled Desired auto-update state.
+ * @returns Updated controlled config.
+ */
+export async function setGeoAutoUpdate(enabled: boolean): Promise<JsonMap> {
+  const config = await readControlledConfig()
+  config['geo-auto-update'] = enabled
+  config['geodata-mode'] = false
+  await writeControlledConfig(config)
+  return config
+}
+
+/**
+ * Sets the mihomo GeoData update interval in hours.
+ *
+ * @param hours Positive update interval in hours.
+ * @returns Updated controlled config.
+ */
+export async function setGeoUpdateInterval(hours: number): Promise<JsonMap> {
+  if (!Number.isInteger(hours) || hours <= 0) {
+    throw new MihoroError('Geo update interval must be a positive integer hour value.')
+  }
+  const config = await readControlledConfig()
+  config['geo-update-interval'] = hours
+  config['geodata-mode'] = false
   await writeControlledConfig(config)
   return config
 }

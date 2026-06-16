@@ -8,6 +8,7 @@ import { MihoroError } from '../lib/errors.js'
 import { generateRuntimeConfig } from '../config/runtime.js'
 import { waitForMihomoReady, useGroupNode } from './api.js'
 import { readConfig } from '../config/state.js'
+import { ensureGeodataResources } from './geodata.js'
 
 const mihomoAssetMap: Record<string, string> = {
   'darwin-x64': 'mihomo-darwin-amd64-compatible',
@@ -23,8 +24,9 @@ const mihomoAssetMap: Record<string, string> = {
  */
 export async function startCore(): Promise<number> {
   await stopCoreIfPidFileExists(false)
-  await generateRuntimeConfig()
   await mkdir(workDir(), { recursive: true })
+  await ensureGeodataResources()
+  await generateRuntimeConfig()
   await mkdir(coreDir(), { recursive: true })
   await rm(socketPath(), { force: true })
   const corePath = await resolveCorePath()

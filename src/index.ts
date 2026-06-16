@@ -3,13 +3,14 @@
 import { Command } from 'commander'
 import { addSubscription, readSubscriptions, removeSubscription, useSubscription } from './config/subscriptions.js'
 import { generateRuntimeConfig } from './config/runtime.js'
-import { setTunEnabled } from './config/controlled.js'
-import { listGroups, listNodes, useGroupNode } from './mihomo/api.js'
+import { readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setTunEnabled } from './config/controlled.js'
+import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import { installService, serviceLogs, serviceStatus, startService, stopService } from './service/service.js'
 import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
+import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
 
 /**
  * Runs an async command handler with consistent CLI error handling.
@@ -22,6 +23,18 @@ function run(handler: () => Promise<void>): void {
     console.error(errorMessage(error))
     process.exit(error instanceof MihoroError ? error.exitCode : 1)
   })
+}
+
+/**
+ * Parses an on/off command argument into a boolean.
+ *
+ * @param value User-provided on/off value.
+ * @returns True for on and false for off.
+ */
+function parseOnOff(value: string): boolean {
+  if (value === 'on') return true
+  if (value === 'off') return false
+  throw new MihoroError('Expected "on" or "off".')
 }
 
 /**
@@ -90,6 +103,46 @@ function createProgram(): Command {
     run(async () => {
       await setTunEnabled(false)
       console.log(`runtime ${await generateRuntimeConfig()}`)
+    })
+  )
+
+  const geo = program.command('geo').description('Manage db-mode GeoData resources')
+  geo.command('prepare').description('Download missing GeoData database files').action(() =>
+    run(async () => {
+      await ensureGeodataResources()
+      for (const item of listGeodataResources()) console.log(`${item.fileName}\tready`)
+    })
+  )
+  geo.command('update').description('Ask running mihomo to update GeoData databases').action(() =>
+    run(async () => {
+      await upgradeGeo()
+      console.log('geodata update requested')
+    })
+  )
+  geo.command('auto').argument('<on|off>').description('Enable or disable mihomo GeoData auto update').action((value: string) =>
+    run(async () => {
+      const enabled = parseOnOff(value)
+      await setGeoAutoUpdate(enabled)
+      console.log(`geo auto ${enabled ? 'on' : 'off'}`)
+      console.log(`runtime ${await generateRuntimeConfig()}`)
+    })
+  )
+  geo.command('interval').argument('<hours>').description('Set mihomo GeoData update interval in hours').action((hours: string) =>
+    run(async () => {
+      const parsed = Number(hours)
+      await setGeoUpdateInterval(parsed)
+      console.log(`geo interval ${parsed}h`)
+      console.log(`runtime ${await generateRuntimeConfig()}`)
+    })
+  )
+  geo.command('urls').description('Show configured GeoData update URLs').action(() =>
+    run(async () => {
+      const config = await readControlledConfig()
+      const geoxUrl = config['geox-url']
+      if (!geoxUrl || typeof geoxUrl !== 'object' || Array.isArray(geoxUrl)) {
+        throw new MihoroError('GeoData URLs are not configured.')
+      }
+      for (const [key, value] of Object.entries(geoxUrl)) console.log(`${key}\t${String(value)}`)
     })
   )
 

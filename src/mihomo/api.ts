@@ -71,6 +71,15 @@ export async function useGroupNode(group: string, node: string): Promise<void> {
 }
 
 /**
+ * Triggers mihomo to update configured GeoData database files.
+ *
+ * @returns Nothing after mihomo accepts the update request.
+ */
+export async function upgradeGeo(): Promise<void> {
+  await getMihomoAxios().post('/configs/geo')
+}
+
+/**
  * Waits for mihomo REST API readiness.
  *
  * @param attempts Number of attempts.

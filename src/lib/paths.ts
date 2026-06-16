@@ -39,6 +39,15 @@ export function workDir(): string {
 }
 
 /**
+ * Returns the directory where mihomo reads GeoData database files.
+ *
+ * @returns Absolute path to the GeoData resource directory.
+ */
+export function geodataDir(): string {
+  return workDir()
+}
+
+/**
  * Returns the runtime config path used by mihomo.
  *
  * @returns Absolute path to generated mihomo config.yaml.
