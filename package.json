@@ -12,6 +12,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepare": "npm run build",
     "install:global": "bash scripts/build-install.sh",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"

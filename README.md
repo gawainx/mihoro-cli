@@ -4,13 +4,25 @@ Standalone CLI for importing Clash Party config, running `mihomo`, and controlli
 
 ## Install
 
-Build and install the CLI globally:
+Install directly from Git:
+
+```bash
+npm install -g git+https://github.com/<owner>/mihoro-cli.git
+mihoro-cli --help
+```
+
+Install a specific branch or commit:
+
+```bash
+npm install -g git+https://github.com/<owner>/mihoro-cli.git#master
+npm install -g git+https://github.com/<owner>/mihoro-cli.git#<commit>
+```
+
+For local development, build and install the current checkout:
 
 ```bash
 pnpm run install:global
 ```
-
-This runs `scripts/build-install.sh`, which installs dependencies, builds `dist/`, packs the project, installs the tarball globally, and verifies `mihoro-cli --help`.
 
 ## Quick Start
 
