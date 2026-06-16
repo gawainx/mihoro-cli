@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## v0.1.5 - 2026-06-16
+
+- Added subscription switching runtime synchronization so `sub use` refreshes runtime config and restarts a running mihomo core.
+- Added subscription-scoped proxy group default node selections with legacy `defaultNodes` fallback.
+- Added current runtime info output, TUN option visibility, node selection commands, and proxy group validation.
+- Fixed proxy enablement by starting mihomo first, verifying proxy port readiness, and checking Linux listener ownership.
+- Changed release packaging so npm tarballs are generated under `dist/`.
+- Documented subscription switch requirements, design, implementation plan, commit discipline, and the repo-local mihoro release workflow.
+- Removed long-running mihomo stdout/stderr forwarding and the `service logs` command.
+
 ## 0.1.4 - 2026-06-16
 
 - Tightened Linux proxy port readiness by verifying the listening socket belongs to the mihoro-managed mihomo pid.
