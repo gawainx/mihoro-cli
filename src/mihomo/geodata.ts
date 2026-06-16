@@ -69,6 +69,7 @@ async function ensureGeodataResource(resource: GeodataResource): Promise<void> {
  */
 async function downloadResource(url: string, targetPath: string): Promise<void> {
   const temporaryPath = `${targetPath}.download`
+  await mkdir(path.dirname(targetPath), { recursive: true })
   await rm(temporaryPath, { force: true })
   const response = await fetch(url)
   if (!response.ok || !response.body) {

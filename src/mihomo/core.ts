@@ -3,7 +3,7 @@ import { createWriteStream, existsSync } from 'node:fs'
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { pipeline } from 'node:stream/promises'
-import { coreDir, coreLogPath, managedCorePath, pidPath, socketPath, workDir } from '../lib/paths.js'
+import { coreDir, coreLogPath, logDir, managedCorePath, pidPath, socketPath, workDir } from '../lib/paths.js'
 import { MihoroError } from '../lib/errors.js'
 import { generateRuntimeConfig } from '../config/runtime.js'
 import { waitForMihomoReady, useGroupNode } from './api.js'
@@ -28,6 +28,7 @@ export async function startCore(): Promise<number> {
   await ensureGeodataResources()
   await generateRuntimeConfig()
   await mkdir(coreDir(), { recursive: true })
+  await mkdir(logDir(), { recursive: true })
   await rm(socketPath(), { force: true })
   const corePath = await resolveCorePath()
   const log = createWriteStream(coreLogPath(), { flags: 'a' })
