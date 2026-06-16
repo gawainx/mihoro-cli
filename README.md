@@ -63,7 +63,7 @@ Info command:
 
 ```bash
 # Show current service state, active subscription, proxy mode, system proxy target,
-# mixed-port, TUN state, and running proxy group selections when mihomo is available.
+# mixed-port, TUN state/options, and running proxy group selections when mihomo is available.
 mihoro-cli info
 ```
 

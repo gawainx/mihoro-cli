@@ -32,7 +32,7 @@ export async function showInfo(): Promise<string> {
     `system proxy target: ${userConfig.proxyHost}:${port}`,
     `mixed-port: ${port}`,
     `allow-lan: ${String(controlledConfig['allow-lan'] ?? false)}`,
-    `tun: ${String(tun?.enable ?? false)}`,
+    `tun: ${formatTun(tun)}`,
     `proxy groups: ${formatGroups(groups)}`
   ]
   return lines.join('\n')
@@ -63,6 +63,36 @@ function formatGroups(groups: MihomoProxy[] | undefined): string {
   if (!groups) return 'unavailable'
   if (groups.length === 0) return 'none'
   return groups.map((group) => `${group.name}=${group.now || 'unknown'}`).join(', ')
+}
+
+/**
+ * Formats controlled TUN config for the info command.
+ *
+ * @param tun Controlled TUN config.
+ * @returns Human-readable TUN state and key mode options.
+ */
+function formatTun(tun: JsonMap | undefined): string {
+  if (!tun) return 'false'
+  const parts = [
+    String(tun.enable ?? false),
+    `stack=${String(tun.stack ?? 'unknown')}`,
+    `auto-route=${String(tun['auto-route'] ?? false)}`,
+    `auto-detect-interface=${String(tun['auto-detect-interface'] ?? false)}`
+  ]
+  const dnsHijack = stringList(tun['dns-hijack'])
+  if (dnsHijack.length > 0) parts.push(`dns-hijack=${dnsHijack.join(',')}`)
+  return parts.join(' ')
+}
+
+/**
+ * Narrows a value to a string list.
+ *
+ * @param value Value to inspect.
+ * @returns String items from the array, or an empty list.
+ */
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
 }
 
 /**
