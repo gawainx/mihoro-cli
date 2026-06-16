@@ -11,11 +11,20 @@ npm install -g git+https://github.com/gawainx/mihoro-cli.git
 mihoro-cli --help
 ```
 
+Install through Git SSH:
+
+```bash
+npm install -g git+ssh://git@github.com/gawainx/mihoro-cli.git
+mihoro-cli --help
+```
+
 Install a specific branch or commit:
 
 ```bash
 npm install -g git+https://github.com/gawainx/mihoro-cli.git#master
 npm install -g git+https://github.com/gawainx/mihoro-cli.git#<commit>
+npm install -g git+ssh://git@github.com/gawainx/mihoro-cli.git#master
+npm install -g git+ssh://git@github.com/gawainx/mihoro-cli.git#<commit>
 ```
 
 For local development, build and install the current checkout:
