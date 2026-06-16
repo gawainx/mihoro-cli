@@ -11,6 +11,7 @@ import { installService, serviceLogs, serviceStatus, startService, stopService }
 import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
+import { packageInfo } from './lib/package-info.js'
 
 /**
  * Runs an async command handler with consistent CLI error handling.
@@ -44,7 +45,7 @@ function parseOnOff(value: string): boolean {
  */
 function createProgram(): Command {
   const program = new Command()
-  program.name('mihoro-cli').description('Standalone mihomo CLI based on the Clash Party runtime model').version('0.1.0')
+  program.name('mihoro-cli').description('Standalone mihomo CLI based on the Clash Party runtime model').version(packageInfo.version)
 
   const sub = program.command('sub').description('Manage subscriptions')
   sub.command('list').description('List subscriptions').action(() =>
