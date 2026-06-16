@@ -39,6 +39,17 @@ function parseOnOff(value: string): boolean {
 }
 
 /**
+ * Starts mihomo when the service is not already running.
+ *
+ * @returns Human-readable service state after the check.
+ */
+async function ensureMihomoRunning(): Promise<string> {
+  const status = await serviceStatus()
+  if (status.startsWith('running ')) return `mihomo already ${status}`
+  return startService()
+}
+
+/**
  * Creates the mihoro-cli command tree.
  *
  * @returns Configured commander program.
@@ -97,8 +108,10 @@ function createProgram(): Command {
     .action((options: { kind: string }) =>
       run(async () => {
         const kind = parseProxyModeKind(options.kind)
+        console.log(`proxy mode ${kind}`)
         await setProxyMode(kind)
         console.log(`runtime ${await generateRuntimeConfig()}`)
+        console.log(await ensureMihomoRunning())
         console.log(await enableSystemProxy())
       })
     )

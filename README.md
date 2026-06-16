@@ -39,10 +39,8 @@ pnpm run install:global
 # Import profiles and controlled mihomo settings from an existing Clash Party data directory.
 mihoro-cli import clash-party <clash-party-data-dir>
 
-# Start the local mihomo core process using the generated mihoro runtime config.
-mihoro-cli service start
-
-# Enable the operating system manual proxy in rules mode and point it at mihomo's mixed port.
+# Enable the operating system manual proxy in rules mode.
+# This also starts mihomo when it is not already running.
 mihoro-cli proxy enable
 
 # Print whether the mihomo core process is currently running.
@@ -100,7 +98,7 @@ mihoro-cli service logs --lines <count>
 System proxy and TUN commands:
 
 ```bash
-# Enable the OS manual HTTP, HTTPS, and SOCKS proxy settings.
+# Enable mihomo when needed, then enable the OS manual HTTP, HTTPS, and SOCKS proxy settings.
 # The proxy host comes from mihoro config, and the port comes from mihomo mixed-port.
 # The default routing mode is rules.
 mihoro-cli proxy enable
