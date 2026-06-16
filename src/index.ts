@@ -7,7 +7,17 @@ import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdat
 import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
-import { installService, restartService, serviceProxyPortReady, serviceStatus, startService, stopService } from './service/service.js'
+import {
+  formatRestartedService,
+  formatStartedService,
+  installService,
+  restartServiceProcess,
+  serviceProxyPortReady,
+  serviceStatus,
+  startService,
+  startServiceProcess,
+  stopService
+} from './service/service.js'
 import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
@@ -41,16 +51,16 @@ function parseOnOff(value: string): boolean {
 /**
  * Starts or restarts mihomo so it uses the current runtime config.
  *
- * @returns Human-readable service state after the check.
+ * @returns Started or restarted process details.
  */
-async function restartOrStartMihomo(): Promise<string> {
+async function restartOrStartMihomo(): Promise<{ pid: number; restarted: boolean }> {
   const status = await serviceStatus()
   if (status.startsWith('running ')) {
     console.log('restarting mihomo to apply runtime config')
-    return restartService()
+    return { pid: await restartServiceProcess(), restarted: true }
   }
   console.log('starting mihomo')
-  return startService()
+  return { pid: await startServiceProcess(), restarted: false }
 }
 
 /**
@@ -112,8 +122,9 @@ function createProgram(): Command {
         console.log(`proxy mode ${kind}`)
         await setProxyMode(kind)
         console.log(`runtime ${await generateRuntimeConfig()}`)
-        console.log(await restartOrStartMihomo())
-        console.log(await serviceProxyPortReady())
+        const { pid, restarted } = await restartOrStartMihomo()
+        console.log(restarted ? formatRestartedService(pid) : formatStartedService(pid))
+        console.log(await serviceProxyPortReady(pid))
         console.log(await enableSystemProxy())
       })
     )

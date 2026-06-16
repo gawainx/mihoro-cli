@@ -1,6 +1,6 @@
 import { createGunzip } from 'node:zlib'
 import { createWriteStream, existsSync } from 'node:fs'
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, readlink, readdir, rm, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { Socket } from 'node:net'
 import { pipeline } from 'node:stream/promises'
@@ -40,7 +40,7 @@ export async function startCore(): Promise<number> {
   await writeFile(pidPath(), String(child.pid), 'utf8')
   child.unref()
   await waitForMihomoReady()
-  await waitForProxyPortReady()
+  await waitForProxyPortReady(child.pid)
   await applyDefaultNodes()
   return child.pid
 }
@@ -48,11 +48,12 @@ export async function startCore(): Promise<number> {
 /**
  * Waits for the configured mixed-port TCP listener.
  *
+ * @param expectedPid Optional process id expected to own the listener.
  * @returns Human-readable ready result.
  */
-export async function waitForProxyPortReady(): Promise<string> {
+export async function waitForProxyPortReady(expectedPid?: number): Promise<string> {
   const { host, port } = await proxyEndpoint()
-  await waitForTcpPort(host, port)
+  await waitForTcpPort(host, port, expectedPid)
   return `proxy port ready ${host}:${port}`
 }
 
@@ -172,16 +173,18 @@ async function proxyEndpoint(): Promise<{ host: string; port: number }> {
  *
  * @param host TCP host.
  * @param port TCP port.
+ * @param expectedPid Optional process id expected to own the listener.
  * @param attempts Number of attempts.
  * @param delayMs Delay between attempts.
  * @returns Nothing after the port accepts a connection.
  */
-async function waitForTcpPort(host: string, port: number, attempts = 30, delayMs = 100): Promise<void> {
+async function waitForTcpPort(host: string, port: number, expectedPid?: number, attempts = 30, delayMs = 100): Promise<void> {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (await canConnect(host, port)) return
+    if (await canConnect(host, port) && (await isPortOwnedByPid(host, port, expectedPid))) return
     await new Promise((resolve) => setTimeout(resolve, delayMs))
   }
-  throw new MihoroError(`mihomo proxy port did not become ready: ${host}:${port}`)
+  const ownerDetail = expectedPid ? ` owned by pid=${expectedPid}` : ''
+  throw new MihoroError(`mihomo proxy port did not become ready${ownerDetail}: ${host}:${port}`)
 }
 
 /**
@@ -209,6 +212,74 @@ async function canConnect(host: string, port: number): Promise<boolean> {
     })
     socket.connect(port, host)
   })
+}
+
+/**
+ * Checks whether a TCP listener belongs to the expected process.
+ *
+ * @param host TCP host.
+ * @param port TCP port.
+ * @param expectedPid Optional process id expected to own the listener.
+ * @returns True when ownership is valid or cannot be checked on this platform.
+ */
+async function isPortOwnedByPid(host: string, port: number, expectedPid?: number): Promise<boolean> {
+  if (!expectedPid || process.platform !== 'linux') return true
+  const inode = await findTcpListenInode(host, port)
+  if (!inode) return false
+  return pidOwnsSocketInode(expectedPid, inode)
+}
+
+/**
+ * Finds the Linux socket inode for a listening TCP endpoint.
+ *
+ * @param host TCP host.
+ * @param port TCP port.
+ * @returns Socket inode or undefined when not found.
+ */
+async function findTcpListenInode(host: string, port: number): Promise<string | undefined> {
+  const expectedPort = port.toString(16).toUpperCase().padStart(4, '0')
+  const expectedAddresses = linuxAddressHexCandidates(host)
+  for (const table of ['/proc/net/tcp', '/proc/net/tcp6']) {
+    const text = await readFile(table, 'utf8').catch(() => '')
+    for (const line of text.split('\n').slice(1)) {
+      const columns = line.trim().split(/\s+/)
+      if (columns.length < 10 || columns[3] !== '0A') continue
+      const [address, localPort] = columns[1].split(':')
+      if (localPort !== expectedPort || !expectedAddresses.has(address)) continue
+      return columns[9]
+    }
+  }
+  return undefined
+}
+
+/**
+ * Returns Linux /proc/net address encodings for a host.
+ *
+ * @param host TCP host.
+ * @returns Candidate hex address strings.
+ */
+function linuxAddressHexCandidates(host: string): Set<string> {
+  if (host === '127.0.0.1' || host === 'localhost') return new Set(['0100007F'])
+  if (host === '0.0.0.0') return new Set(['00000000'])
+  if (host === '::1') return new Set(['00000000000000000000000001000000'])
+  return new Set([host])
+}
+
+/**
+ * Checks whether a process owns a socket inode.
+ *
+ * @param pid Process id.
+ * @param inode Socket inode.
+ * @returns True when a process fd points at the inode.
+ */
+async function pidOwnsSocketInode(pid: number, inode: string): Promise<boolean> {
+  const fdDir = `/proc/${pid}/fd`
+  const entries = await readdir(fdDir).catch(() => [])
+  for (const entry of entries) {
+    const target = await readlink(`${fdDir}/${entry}`).catch(() => '')
+    if (target === `socket:[${inode}]`) return true
+  }
+  return false
 }
 
 /**

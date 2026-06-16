@@ -2,6 +2,11 @@
 
 All notable changes to this project are recorded here.
 
+## 0.1.4 - 2026-06-16
+
+- Tightened Linux proxy port readiness by verifying the listening socket belongs to the mihoro-managed mihomo pid.
+- Prevented external listeners on the same mixed-port from being mistaken for mihoro readiness.
+
 ## 0.1.3 - 2026-06-16
 
 - Added mixed-port TCP readiness checks after mihomo startup.

@@ -72,7 +72,36 @@ ${args.map((arg) => `    <string>${xmlEscape(arg)}</string>`).join('\n')}
  */
 export async function startService(): Promise<string> {
   const pid = await startCore()
+  return formatStartedService(pid)
+}
+
+/**
+ * Starts mihomo service process and returns the process id.
+ *
+ * @returns Started process id.
+ */
+export async function startServiceProcess(): Promise<number> {
+  return startCore()
+}
+
+/**
+ * Formats a started mihomo service result.
+ *
+ * @param pid Started process id.
+ * @returns Human-readable start result.
+ */
+export function formatStartedService(pid: number): string {
   return `started mihomo pid=${pid}`
+}
+
+/**
+ * Formats a restarted mihomo service result.
+ *
+ * @param pid Restarted process id.
+ * @returns Human-readable restart result.
+ */
+export function formatRestartedService(pid: number): string {
+  return `restarted mihomo pid=${pid}`
 }
 
 /**
@@ -91,9 +120,18 @@ export async function stopService(): Promise<string> {
  * @returns Human-readable restart result.
  */
 export async function restartService(): Promise<string> {
+  const pid = await restartServiceProcess()
+  return formatRestartedService(pid)
+}
+
+/**
+ * Restarts mihomo service process and returns the process id.
+ *
+ * @returns Restarted process id.
+ */
+export async function restartServiceProcess(): Promise<number> {
   await stopCore()
-  const pid = await startCore()
-  return `restarted mihomo pid=${pid}`
+  return startCore()
 }
 
 /**
@@ -101,8 +139,8 @@ export async function restartService(): Promise<string> {
  *
  * @returns Human-readable ready result.
  */
-export async function serviceProxyPortReady(): Promise<string> {
-  return waitForProxyPortReady()
+export async function serviceProxyPortReady(expectedPid?: number): Promise<string> {
+  return waitForProxyPortReady(expectedPid)
 }
 
 /**
