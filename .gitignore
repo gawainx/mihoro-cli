@@ -1,4 +1,5 @@
 AGENTS.md.local
+AGENTS.local.md
 node_modules/
 .pnpm-store/
 dist/
