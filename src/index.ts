@@ -19,6 +19,7 @@ import {
   stopService
 } from './service/service.js'
 import { importClashPartyConfig } from './import/clash-party.js'
+import { showInfo } from './info.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
 import { packageInfo } from './lib/package-info.js'
@@ -110,6 +111,8 @@ function createProgram(): Command {
   service.command('start').description('Start mihomo').action(() => run(async () => console.log(await startService())))
   service.command('stop').description('Stop mihomo').action(() => run(async () => console.log(await stopService())))
   service.command('status').description('Show mihomo status').action(() => run(async () => console.log(await serviceStatus())))
+
+  program.command('info').description('Show current mihoro and mihomo info').action(() => run(async () => console.log(await showInfo())))
 
   const proxy = program.command('proxy').description('Manage system proxy')
   proxy

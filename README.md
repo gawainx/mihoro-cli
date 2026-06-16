@@ -43,6 +43,9 @@ mihoro-cli import clash-party <clash-party-data-dir>
 # This starts mihomo when needed, or restarts it when already running so runtime config changes apply.
 mihoro-cli proxy enable
 
+# Show service state, proxy mode, selected nodes, and listening ports.
+mihoro-cli info
+
 # Print whether the mihomo core process is currently running.
 mihoro-cli service status
 ```
@@ -55,6 +58,14 @@ mihoro-cli import clash-party <clash-party-data-dir> --overwrite
 ```
 
 ## Commands
+
+Info command:
+
+```bash
+# Show current service state, active subscription, proxy mode, system proxy target,
+# mixed-port, TUN state, and running proxy group selections when mihomo is available.
+mihoro-cli info
+```
 
 Subscription commands:
 
