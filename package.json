@@ -1,6 +1,6 @@
 {
   "name": "mihoro-cli",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Standalone mihomo CLI based on the Clash Party runtime model.",
   "type": "module",
   "bin": {

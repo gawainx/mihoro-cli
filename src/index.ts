@@ -7,7 +7,7 @@ import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdat
 import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
-import { installService, serviceStatus, startService, stopService } from './service/service.js'
+import { installService, restartService, serviceProxyPortReady, serviceStatus, startService, stopService } from './service/service.js'
 import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
@@ -39,13 +39,17 @@ function parseOnOff(value: string): boolean {
 }
 
 /**
- * Starts mihomo when the service is not already running.
+ * Starts or restarts mihomo so it uses the current runtime config.
  *
  * @returns Human-readable service state after the check.
  */
-async function ensureMihomoRunning(): Promise<string> {
+async function restartOrStartMihomo(): Promise<string> {
   const status = await serviceStatus()
-  if (status.startsWith('running ')) return `mihomo already ${status}`
+  if (status.startsWith('running ')) {
+    console.log('restarting mihomo to apply runtime config')
+    return restartService()
+  }
+  console.log('starting mihomo')
   return startService()
 }
 
@@ -108,7 +112,8 @@ function createProgram(): Command {
         console.log(`proxy mode ${kind}`)
         await setProxyMode(kind)
         console.log(`runtime ${await generateRuntimeConfig()}`)
-        console.log(await ensureMihomoRunning())
+        console.log(await restartOrStartMihomo())
+        console.log(await serviceProxyPortReady())
         console.log(await enableSystemProxy())
       })
     )

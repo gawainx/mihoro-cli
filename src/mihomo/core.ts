@@ -2,6 +2,7 @@ import { createGunzip } from 'node:zlib'
 import { createWriteStream, existsSync } from 'node:fs'
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
+import { Socket } from 'node:net'
 import { pipeline } from 'node:stream/promises'
 import { coreDir, managedCorePath, pidPath, socketPath, workDir } from '../lib/paths.js'
 import { MihoroError } from '../lib/errors.js'
@@ -9,6 +10,7 @@ import { generateRuntimeConfig } from '../config/runtime.js'
 import { waitForMihomoReady, useGroupNode } from './api.js'
 import { readConfig } from '../config/state.js'
 import { ensureGeodataResources } from './geodata.js'
+import { readControlledConfig } from '../config/controlled.js'
 
 const mihomoAssetMap: Record<string, string> = {
   'darwin-x64': 'mihomo-darwin-amd64-compatible',
@@ -38,8 +40,20 @@ export async function startCore(): Promise<number> {
   await writeFile(pidPath(), String(child.pid), 'utf8')
   child.unref()
   await waitForMihomoReady()
+  await waitForProxyPortReady()
   await applyDefaultNodes()
   return child.pid
+}
+
+/**
+ * Waits for the configured mixed-port TCP listener.
+ *
+ * @returns Human-readable ready result.
+ */
+export async function waitForProxyPortReady(): Promise<string> {
+  const { host, port } = await proxyEndpoint()
+  await waitForTcpPort(host, port)
+  return `proxy port ready ${host}:${port}`
 }
 
 /**
@@ -136,6 +150,65 @@ async function stopCoreIfPidFileExists(removeSocket: boolean): Promise<boolean> 
   await rm(pidPath(), { force: true })
   if (removeSocket) await rm(socketPath(), { force: true })
   return stopped
+}
+
+/**
+ * Resolves the TCP endpoint expected for the mihomo mixed-port listener.
+ *
+ * @returns Host and port used by system proxy settings.
+ */
+async function proxyEndpoint(): Promise<{ host: string; port: number }> {
+  const config = await readConfig()
+  const controlled = await readControlledConfig()
+  const port = Number(controlled['mixed-port'] || 7890)
+  if (!Number.isInteger(port) || port <= 0) {
+    throw new MihoroError(`Invalid mihomo mixed-port: ${String(controlled['mixed-port'])}`)
+  }
+  return { host: config.proxyHost, port }
+}
+
+/**
+ * Waits for a TCP port to accept connections.
+ *
+ * @param host TCP host.
+ * @param port TCP port.
+ * @param attempts Number of attempts.
+ * @param delayMs Delay between attempts.
+ * @returns Nothing after the port accepts a connection.
+ */
+async function waitForTcpPort(host: string, port: number, attempts = 30, delayMs = 100): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (await canConnect(host, port)) return
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+  throw new MihoroError(`mihomo proxy port did not become ready: ${host}:${port}`)
+}
+
+/**
+ * Checks one TCP connection attempt.
+ *
+ * @param host TCP host.
+ * @param port TCP port.
+ * @returns True when the connection succeeds.
+ */
+async function canConnect(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new Socket()
+    socket.setTimeout(1000)
+    socket.once('connect', () => {
+      socket.destroy()
+      resolve(true)
+    })
+    socket.once('error', () => {
+      socket.destroy()
+      resolve(false)
+    })
+    socket.once('timeout', () => {
+      socket.destroy()
+      resolve(false)
+    })
+    socket.connect(port, host)
+  })
 }
 
 /**

@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here.
 
+## 0.1.3 - 2026-06-16
+
+- Added mixed-port TCP readiness checks after mihomo startup.
+- Changed `proxy enable` to restart a running mihomo process so generated runtime config changes apply before enabling the system proxy.
+- Added progress output for mihomo start/restart and proxy port readiness.
+
 ## 0.1.2 - 2026-06-16
 
 - Removed mihoro-cli's long-running stdout/stderr forwarding for mihomo.

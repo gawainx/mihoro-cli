@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import os from 'node:os'
 import { systemdUserDir } from '../lib/paths.js'
-import { coreStatus, startCore, stopCore } from '../mihomo/core.js'
+import { coreStatus, startCore, stopCore, waitForProxyPortReady } from '../mihomo/core.js'
 import { MihoroError } from '../lib/errors.js'
 
 const execFileAsync = promisify(execFile)
@@ -83,6 +83,26 @@ export async function startService(): Promise<string> {
 export async function stopService(): Promise<string> {
   const stopped = await stopCore()
   return stopped ? 'stopped mihomo' : 'mihomo was not running'
+}
+
+/**
+ * Restarts mihomo service process.
+ *
+ * @returns Human-readable restart result.
+ */
+export async function restartService(): Promise<string> {
+  await stopCore()
+  const pid = await startCore()
+  return `restarted mihomo pid=${pid}`
+}
+
+/**
+ * Waits for the mihomo proxy port to accept connections.
+ *
+ * @returns Human-readable ready result.
+ */
+export async function serviceProxyPortReady(): Promise<string> {
+  return waitForProxyPortReady()
 }
 
 /**
