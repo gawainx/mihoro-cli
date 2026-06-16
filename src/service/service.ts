@@ -16,16 +16,15 @@ const execFileAsync = promisify(execFile)
 export async function installService(): Promise<string> {
   if (process.platform === 'linux') {
     await mkdir(systemdUserDir(), { recursive: true })
-    const node = process.execPath
-    const script = new URL('../../index.js', import.meta.url).pathname
+    const [command, ...args] = serviceCommand()
     const unit = `[Unit]
 Description=mihoro-cli mihomo service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=${node} ${script} service start
-ExecStop=${node} ${script} service stop
+ExecStart=${systemdEscape(command)} ${args.map(systemdEscape).join(' ')} service start
+ExecStop=${systemdEscape(command)} ${args.map(systemdEscape).join(' ')} service stop
 
 [Install]
 WantedBy=default.target
@@ -38,8 +37,7 @@ WantedBy=default.target
   if (process.platform === 'darwin') {
     const launchAgentsDir = `${os.homedir()}/Library/LaunchAgents`
     await mkdir(launchAgentsDir, { recursive: true })
-    const node = process.execPath
-    const script = new URL('../../index.js', import.meta.url).pathname
+    const [command, ...args] = serviceCommand()
     const plistPath = `${launchAgentsDir}/dev.mihoro.cli.plist`
     const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -49,8 +47,8 @@ WantedBy=default.target
   <string>dev.mihoro.cli</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${node}</string>
-    <string>${script}</string>
+    <string>${xmlEscape(command)}</string>
+${args.map((arg) => `    <string>${xmlEscape(arg)}</string>`).join('\n')}
     <string>service</string>
     <string>start</string>
   </array>
@@ -105,4 +103,41 @@ export async function serviceStatus(): Promise<string> {
 export async function serviceLogs(lines = 80): Promise<string> {
   const text = await readFile(coreLogPath(), 'utf8').catch(() => '')
   return text.split('\n').slice(-lines).join('\n')
+}
+
+/**
+ * Returns the executable command used to reinvoke the installed CLI from a service manager.
+ *
+ * @returns Command and base arguments for running mihoro-cli.
+ */
+function serviceCommand(): string[] {
+  const entry = process.argv[1]
+  if (!entry) return [process.execPath]
+  if (entry.endsWith('.ts')) return [process.execPath, new URL('../index.js', import.meta.url).pathname]
+  return [entry]
+}
+
+/**
+ * Escapes a systemd command argument with double quotes.
+ *
+ * @param value Argument value.
+ * @returns Escaped systemd argument.
+ */
+function systemdEscape(value: string): string {
+  return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
+}
+
+/**
+ * Escapes text for a LaunchAgent plist XML string.
+ *
+ * @param value Text value.
+ * @returns XML-safe text.
+ */
+function xmlEscape(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;')
 }

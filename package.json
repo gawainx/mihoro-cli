@@ -1,7 +1,7 @@
 {
   "name": "mihoro-cli",
   "version": "0.1.0",
-  "description": "A standalone TypeScript CLI project skeleton.",
+  "description": "Standalone mihomo CLI based on the Clash Party runtime model.",
   "type": "module",
   "bin": {
     "mihoro-cli": "./dist/index.js"
@@ -10,8 +10,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
   },
   "engines": {

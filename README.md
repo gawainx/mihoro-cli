@@ -13,28 +13,56 @@ Standalone TypeScript CLI for running mihomo with a Clash Party-style runtime mo
 
 ## Commands
 
+After installing the package, run the CLI directly:
+
 ```bash
-pnpm run dev sub add <name> <url>
-pnpm run dev sub list
-pnpm run dev sub use <name-or-id>
-pnpm run dev sub remove <name-or-id>
+mihoro-cli sub add <name> <url>
+mihoro-cli sub list
+mihoro-cli sub use <name-or-id>
+mihoro-cli sub remove <name-or-id>
 
-pnpm run dev service install
-pnpm run dev service start
-pnpm run dev service stop
-pnpm run dev service status
-pnpm run dev service logs
+mihoro-cli service install
+mihoro-cli service start
+mihoro-cli service stop
+mihoro-cli service status
+mihoro-cli service logs
 
-pnpm run dev proxy enable
-pnpm run dev proxy disable
+mihoro-cli proxy enable
+mihoro-cli proxy disable
 
-pnpm run dev tun enable
-pnpm run dev tun disable
+mihoro-cli tun enable
+mihoro-cli tun disable
 
-pnpm run dev node list
-pnpm run dev group list
-pnpm run dev group use <group> <node>
+mihoro-cli node list
+mihoro-cli group list
+mihoro-cli group use <group> <node>
 ```
+
+## Build and install
+
+Build the distributable CLI:
+
+```bash
+pnpm install
+pnpm run build
+```
+
+Run the compiled program from the repository:
+
+```bash
+node dist/index.js --help
+./dist/index.js service status
+```
+
+Create a package tarball and install it globally:
+
+```bash
+pnpm pack
+pnpm add -g ./mihoro-cli-0.1.0.tgz
+mihoro-cli --help
+```
+
+When installing the autostart service, use the installed `mihoro-cli` command instead of `pnpm run dev`, so the generated systemd unit or LaunchAgent points at the packaged CLI entrypoint.
 
 ## Notes
 
