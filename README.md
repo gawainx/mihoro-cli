@@ -7,15 +7,15 @@ Standalone CLI for importing Clash Party config, running `mihomo`, and controlli
 Install directly from Git:
 
 ```bash
-npm install -g git+https://github.com/<owner>/mihoro-cli.git
+npm install -g git+https://github.com/gawainx/mihoro-cli.git
 mihoro-cli --help
 ```
 
 Install a specific branch or commit:
 
 ```bash
-npm install -g git+https://github.com/<owner>/mihoro-cli.git#master
-npm install -g git+https://github.com/<owner>/mihoro-cli.git#<commit>
+npm install -g git+https://github.com/gawainx/mihoro-cli.git#master
+npm install -g git+https://github.com/gawainx/mihoro-cli.git#<commit>
 ```
 
 For local development, build and install the current checkout:
