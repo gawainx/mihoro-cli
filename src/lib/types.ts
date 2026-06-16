@@ -6,9 +6,13 @@ export interface SubscriptionItem {
   /** Human-readable subscription name shown in CLI output. */
   name: string
   /** Remote subscription URL used to refresh the profile. */
-  url: string
+  url?: string
   /** ISO timestamp for the last successful profile download. */
   updatedAt: string
+  /** Profile type, imported from Clash Party or created by mihoro-cli. */
+  type?: 'remote' | 'local'
+  /** Source system for imported profile metadata. */
+  source?: 'mihoro-cli' | 'clash-party'
 }
 
 export interface SubscriptionState {

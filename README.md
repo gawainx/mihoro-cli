@@ -23,6 +23,12 @@ mihoro-cli --help
 
 ## First Run
 
+Import existing Clash Party configuration when available:
+
+```bash
+mihoro-cli import clash-party <clash-party-data-dir>
+```
+
 Add a subscription:
 
 ```bash
@@ -57,6 +63,34 @@ mihoro-cli sub remove <name-or-id>
 ```
 
 Subscription profiles are downloaded as YAML files and saved under the mihoro data directory.
+
+## Import Clash Party Config
+
+```bash
+mihoro-cli import clash-party <clash-party-data-dir>
+mihoro-cli import clash-party <clash-party-data-dir> --overwrite
+```
+
+The import command reads these Clash Party files:
+
+```text
+profile.yaml
+profiles/*.yaml
+mihomo.yaml
+```
+
+It writes converted state into mihoro-cli:
+
+```text
+subscriptions.yaml
+profiles/*.yaml
+mihomo.yaml
+runtime/config.yaml
+```
+
+Default behavior refuses to overwrite existing mihoro files. Use `--overwrite` to back up conflicting files under `backups/clash-party-import-<timestamp>/` before writing imported files.
+
+The command imports subscription profiles and controlled mihomo config only. It does not import GUI preferences, override/rules, Sub-Store, WebDAV, or Clash Party runtime `work/` files.
 
 ## Service
 

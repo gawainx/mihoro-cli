@@ -8,6 +8,7 @@ import { listGroups, listNodes, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import { installService, serviceLogs, serviceStatus, startService, stopService } from './service/service.js'
+import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 
 /**
@@ -112,6 +113,24 @@ function createProgram(): Command {
       console.log(`selected ${groupName} -> ${nodeName}`)
     })
   )
+
+  const importCommand = program.command('import').description('Import configuration from other clients')
+  importCommand
+    .command('clash-party')
+    .argument('<data-dir>')
+    .option('--overwrite', 'overwrite existing mihoro files after backup')
+    .description('Import Clash Party profiles and controlled mihomo config')
+    .action((dataDir: string, options: { overwrite?: boolean }) =>
+      run(async () => {
+        const result = await importClashPartyConfig(dataDir, { overwrite: Boolean(options.overwrite) })
+        console.log(`imported profiles: ${result.importedProfiles}`)
+        console.log(`current profile: ${result.current}`)
+        if (result.controlledConfigPath) console.log(`controlled config: ${result.controlledConfigPath}`)
+        console.log(`runtime ${result.runtimePath}`)
+        if (result.backupDir) console.log(`backup ${result.backupDir}`)
+        if (result.skippedProfiles.length > 0) console.log(`skipped profiles: ${result.skippedProfiles.join(',')}`)
+      })
+    )
 
   return program
 }
