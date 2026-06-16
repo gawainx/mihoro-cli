@@ -129,15 +129,6 @@ export function logDir(): string {
 }
 
 /**
- * Returns the mihomo core log path.
- *
- * @returns Absolute path to the mihomo core log file.
- */
-export function coreLogPath(): string {
-  return path.join(logDir(), 'core.log')
-}
-
-/**
  * Returns the systemd unit directory.
  *
  * @returns Absolute path to user systemd units.

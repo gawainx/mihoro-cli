@@ -7,7 +7,7 @@ import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdat
 import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
-import { installService, serviceLogs, serviceStatus, startService, stopService } from './service/service.js'
+import { installService, serviceStatus, startService, stopService } from './service/service.js'
 import { importClashPartyConfig } from './import/clash-party.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources, listGeodataResources } from './mihomo/geodata.js'
@@ -96,9 +96,6 @@ function createProgram(): Command {
   service.command('start').description('Start mihomo').action(() => run(async () => console.log(await startService())))
   service.command('stop').description('Stop mihomo').action(() => run(async () => console.log(await stopService())))
   service.command('status').description('Show mihomo status').action(() => run(async () => console.log(await serviceStatus())))
-  service.command('logs').option('-n, --lines <lines>', 'number of trailing lines', '80').description('Show mihomo logs').action((options: { lines: string }) =>
-    run(async () => console.log(await serviceLogs(Number(options.lines))))
-  )
 
   const proxy = program.command('proxy').description('Manage system proxy')
   proxy

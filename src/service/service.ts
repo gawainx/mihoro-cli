@@ -1,8 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import os from 'node:os'
-import { coreLogPath, systemdUserDir } from '../lib/paths.js'
+import { systemdUserDir } from '../lib/paths.js'
 import { coreStatus, startCore, stopCore } from '../mihomo/core.js'
 import { MihoroError } from '../lib/errors.js'
 
@@ -92,17 +92,6 @@ export async function stopService(): Promise<string> {
  */
 export async function serviceStatus(): Promise<string> {
   return coreStatus()
-}
-
-/**
- * Reads mihomo core logs.
- *
- * @param lines Number of trailing lines.
- * @returns Log text.
- */
-export async function serviceLogs(lines = 80): Promise<string> {
-  const text = await readFile(coreLogPath(), 'utf8').catch(() => '')
-  return text.split('\n').slice(-lines).join('\n')
 }
 
 /**

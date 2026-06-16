@@ -88,11 +88,6 @@ mihoro-cli service stop
 # Show the mihomo process status and related runtime information.
 mihoro-cli service status
 
-# Print the last 80 lines from the mihomo core log.
-mihoro-cli service logs
-
-# Print a custom number of trailing lines from the mihomo core log.
-mihoro-cli service logs --lines <count>
 ```
 
 System proxy and TUN commands:
@@ -163,7 +158,7 @@ Override it per command:
 MIHORO_HOME=/path/to/data mihoro-cli service status
 ```
 
-mihoro-cli keeps its own `subscriptions.yaml`, `profiles/`, `mihomo.yaml`, `runtime/`, `logs/`, and `core/`. It does not modify the Clash Party data directory during import.
+mihoro-cli keeps its own `subscriptions.yaml`, `profiles/`, `mihomo.yaml`, `runtime/`, optional CLI `logs/`, and `core/`. It does not modify the Clash Party data directory during import.
 
 ## Development
 
