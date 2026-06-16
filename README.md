@@ -21,13 +21,6 @@ pnpm add -g ./mihoro-cli-0.1.0.tgz
 mihoro-cli --help
 ```
 
-For local verification without global install:
-
-```bash
-./dist/index.js --help
-./dist/index.js service status
-```
-
 ## First Run
 
 Add a subscription:
