@@ -4,7 +4,7 @@ import { Command } from 'commander'
 import { addSubscription, readSubscriptions, removeSubscription, useSubscription } from './config/subscriptions.js'
 import { generateRuntimeConfig } from './config/runtime.js'
 import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
-import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
+import { assertGroupCanUseNode, listGroups, listNodesWithGroups, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import {
@@ -190,9 +190,23 @@ function createProgram(): Command {
   const node = program.command('node').description('Manage nodes')
   node.command('list').description('List available nodes').action(() =>
     run(async () => {
-      for (const item of await listNodes()) console.log(`${item.name}\t${item.type || ''}`)
+      for (const item of await listNodesWithGroups()) console.log(`${item.name}\t${item.type || ''}\t${item.groups.join(',')}`)
     })
   )
+  node
+    .command('use')
+    .argument('<node>')
+    .requiredOption('--group <group>', 'proxy group to switch')
+    .description('Switch a proxy group to a node')
+    .action((nodeName: string, options: { group: string }) =>
+      run(async () => {
+        await assertGroupCanUseNode(options.group, nodeName)
+        await useGroupNode(options.group, nodeName)
+        await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [options.group]: nodeName } }))
+        console.log(`selected ${options.group} -> ${nodeName}`)
+        console.log(`saved default node for ${options.group}`)
+      })
+    )
 
   const group = program.command('group').description('Manage proxy groups')
   group.command('list').description('List proxy groups').action(() =>

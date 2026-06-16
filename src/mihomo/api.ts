@@ -60,6 +60,44 @@ export async function listNodes(): Promise<MihomoProxy[]> {
 }
 
 /**
+ * Returns node proxies with visible group membership.
+ *
+ * @returns Array of node proxies and the groups that can select each node.
+ */
+export async function listNodesWithGroups(): Promise<Array<MihomoProxy & { groups: string[] }>> {
+  const groups = await listGroups()
+  const nodes = await listNodes()
+  return nodes.map((node) => ({
+    ...node,
+    groups: groups.filter((group) => group.all?.includes(node.name)).map((group) => group.name)
+  }))
+}
+
+/**
+ * Validates that a visible proxy group can select a node.
+ *
+ * @param groupName Proxy group name.
+ * @param nodeName Node name.
+ * @returns Nothing after validation succeeds.
+ */
+export async function assertGroupCanUseNode(groupName: string, nodeName: string): Promise<void> {
+  const [groups, nodes] = await Promise.all([listGroups(), listNodes()])
+  const node = nodes.find((item) => item.name === nodeName)
+  if (!node) {
+    throw new MihoroError(`Node not found: ${nodeName}. Run "mihoro-cli node list" to see available nodes.`)
+  }
+  const group = groups.find((item) => item.name === groupName)
+  if (!group) {
+    throw new MihoroError(`Proxy group not found: ${groupName}. Run "mihoro-cli group list" to see available groups.`)
+  }
+  if (!group.all?.includes(nodeName)) {
+    throw new MihoroError(
+      `Node "${nodeName}" is not available in group "${groupName}". Run "mihoro-cli node list" to see node groups.`
+    )
+  }
+}
+
+/**
  * Changes a proxy group's selected node.
  *
  * @param group Proxy group name.
