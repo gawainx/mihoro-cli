@@ -7,7 +7,9 @@
     "mihoro-cli": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.js.map"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
