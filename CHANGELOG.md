@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here.
 
+## 0.1.2 - 2026-06-16
+
+- Removed mihoro-cli's long-running stdout/stderr forwarding for mihomo.
+- Removed `service logs` because mihomo core logs are handled by mihomo itself.
+- Kept `service start` focused on starting mihomo, waiting for API readiness, and returning to the user.
+
 ## 0.1.1 - 2026-06-16
 
 - Fixed `proxy enable` so it starts mihomo when the service is not already running.
