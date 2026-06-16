@@ -3,6 +3,14 @@ import type { JsonMap } from '../lib/types.js'
 import { readYaml, writeYaml } from '../lib/yaml.js'
 import { MihoroError } from '../lib/errors.js'
 
+export type ProxyModeKind = 'rules' | 'global' | 'direct'
+
+const proxyModeByKind: Record<ProxyModeKind, string> = {
+  rules: 'rule',
+  global: 'global',
+  direct: 'direct'
+}
+
 const defaultControlledConfig: JsonMap = {
   'mixed-port': 7890,
   'allow-lan': false,
@@ -65,6 +73,30 @@ export async function setTunEnabled(enabled: boolean): Promise<JsonMap> {
   if (enabled) config.dns = { ...dns, enable: true }
   await writeControlledConfig(config)
   return config
+}
+
+/**
+ * Sets the mihomo proxy routing mode.
+ *
+ * @param kind User-facing proxy mode kind.
+ * @returns Updated controlled config.
+ */
+export async function setProxyMode(kind: ProxyModeKind): Promise<JsonMap> {
+  const config = await readControlledConfig()
+  config.mode = proxyModeByKind[kind]
+  await writeControlledConfig(config)
+  return config
+}
+
+/**
+ * Parses the proxy mode kind accepted by the CLI.
+ *
+ * @param value User-provided proxy mode kind.
+ * @returns Validated proxy mode kind.
+ */
+export function parseProxyModeKind(value: string): ProxyModeKind {
+  if (value === 'rules' || value === 'global' || value === 'direct') return value
+  throw new MihoroError('Expected proxy kind to be one of: rules, global, direct.')
 }
 
 /**

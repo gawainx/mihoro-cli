@@ -3,7 +3,7 @@
 import { Command } from 'commander'
 import { addSubscription, readSubscriptions, removeSubscription, useSubscription } from './config/subscriptions.js'
 import { generateRuntimeConfig } from './config/runtime.js'
-import { readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setTunEnabled } from './config/controlled.js'
+import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
 import { listGroups, listNodes, upgradeGeo, useGroupNode } from './mihomo/api.js'
 import { updateConfig } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
@@ -89,7 +89,18 @@ function createProgram(): Command {
   )
 
   const proxy = program.command('proxy').description('Manage system proxy')
-  proxy.command('enable').description('Enable system proxy').action(() => run(async () => console.log(await enableSystemProxy())))
+  proxy
+    .command('enable')
+    .option('--kind <rules|global|direct>', 'proxy routing mode', 'rules')
+    .description('Enable system proxy')
+    .action((options: { kind: string }) =>
+      run(async () => {
+        const kind = parseProxyModeKind(options.kind)
+        await setProxyMode(kind)
+        console.log(`runtime ${await generateRuntimeConfig()}`)
+        console.log(await enableSystemProxy())
+      })
+    )
   proxy.command('disable').description('Disable system proxy').action(() => run(async () => console.log(await disableSystemProxy())))
 
   const tun = program.command('tun').description('Manage TUN config')
