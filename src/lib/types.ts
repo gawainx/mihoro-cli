@@ -27,8 +27,10 @@ export interface MihoroConfig {
   proxyHost: string
   /** Bypass list used for manual system proxy settings. */
   proxyBypass: string[]
-  /** Preferred node by proxy group, applied after service start and group use. */
+  /** Legacy preferred node by proxy group, used as fallback for older config files. */
   defaultNodes: Record<string, string>
+  /** Preferred node by proxy group scoped by subscription id. */
+  subscriptionDefaultNodes: Record<string, Record<string, string>>
 }
 
 export interface MihomoProxy {

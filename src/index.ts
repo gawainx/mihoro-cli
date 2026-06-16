@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander'
-import { addSubscription, readSubscriptions, removeSubscription, useSubscription } from './config/subscriptions.js'
+import { addSubscription, currentSubscription, readSubscriptions, removeSubscription } from './config/subscriptions.js'
+import { switchSubscription } from './config/subscription-switch.js'
 import { generateRuntimeConfig } from './config/runtime.js'
 import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
 import { assertGroupCanUseNode, listGroups, listNodesWithGroups, upgradeGeo, useGroupNode } from './mihomo/api.js'
-import { updateConfig } from './config/state.js'
+import { saveDefaultNodeForSubscription } from './config/state.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import {
   formatRestartedService,
@@ -102,10 +103,10 @@ function createProgram(): Command {
   )
   sub.command('use').argument('<name-or-id>').description('Use a subscription').action((nameOrId: string) =>
     run(async () => {
-      const item = await useSubscription(nameOrId)
-      const runtimePath = await generateRuntimeConfig()
+      const { item, runtimePath, restartedPid } = await switchSubscription(nameOrId)
       console.log(`Active subscription set: ${item.name} (${item.id})`)
       console.log(`Runtime config regenerated: ${runtimePath}`)
+      if (restartedPid) console.log(`Mihomo restarted: ${formatRestartedService(restartedPid)}`)
     })
   )
 
@@ -236,7 +237,8 @@ function createProgram(): Command {
       run(async () => {
         await assertGroupCanUseNode(options.group, nodeName)
         await useGroupNode(options.group, nodeName)
-        await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [options.group]: nodeName } }))
+        const current = await currentSubscription()
+        await saveDefaultNodeForSubscription(current.id, options.group, nodeName)
         console.log(`Proxy group switched: ${options.group} -> ${nodeName}`)
         console.log(`Default node saved for future starts: ${options.group} -> ${nodeName}`)
       })
@@ -257,7 +259,8 @@ function createProgram(): Command {
   group.command('use').argument('<group>').argument('<node>').description('Switch proxy group node').action((groupName: string, nodeName: string) =>
     run(async () => {
       await useGroupNode(groupName, nodeName)
-      await updateConfig((config) => ({ ...config, defaultNodes: { ...config.defaultNodes, [groupName]: nodeName } }))
+      const current = await currentSubscription()
+      await saveDefaultNodeForSubscription(current.id, groupName, nodeName)
       console.log(`Proxy group switched: ${groupName} -> ${nodeName}`)
       console.log(`Default node saved for future starts: ${groupName} -> ${nodeName}`)
     })

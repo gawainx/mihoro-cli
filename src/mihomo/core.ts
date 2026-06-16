@@ -8,9 +8,10 @@ import { coreDir, managedCorePath, pidPath, socketPath, workDir } from '../lib/p
 import { MihoroError } from '../lib/errors.js'
 import { generateRuntimeConfig } from '../config/runtime.js'
 import { waitForMihomoReady, useGroupNode } from './api.js'
-import { readConfig } from '../config/state.js'
+import { readConfig, readDefaultNodesForSubscription } from '../config/state.js'
 import { ensureGeodataResources } from './geodata.js'
 import { readControlledConfig } from '../config/controlled.js'
+import { currentSubscription } from '../config/subscriptions.js'
 
 const mihomoAssetMap: Record<string, string> = {
   'darwin-x64': 'mihomo-darwin-amd64-compatible',
@@ -288,7 +289,8 @@ async function pidOwnsSocketInode(pid: number, inode: string): Promise<boolean> 
  * @returns Nothing after preferences are applied.
  */
 async function applyDefaultNodes(): Promise<void> {
-  const { defaultNodes } = await readConfig()
+  const current = await currentSubscription()
+  const defaultNodes = await readDefaultNodesForSubscription(current.id)
   for (const [group, node] of Object.entries(defaultNodes)) {
     await useGroupNode(group, node)
   }
