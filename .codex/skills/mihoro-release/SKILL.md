@@ -1,13 +1,13 @@
 ---
 name: mihoro-release
-description: 用于 /Users/yat/code/mihoro-cli 的项目专属版本发布流程。当用户要求发布版本、更新版本号、更新 CHANGELOG、打 annotated tag、运行 pnpm run pack:dist、推送 origin，或明确要求执行 mihoro-cli 版本发布技能时使用。
+description: 用于 mihoro-cli 的项目专属版本发布流程。当用户要求发布版本、更新版本号、更新 CHANGELOG、打 annotated tag、运行 pnpm run pack:dist、推送 origin，或明确要求执行 mihoro-cli 版本发布技能时使用。
 ---
 
 # mihoro-release
 
 ## 发布原则
 
-只在 `/Users/yat/code/mihoro-cli` 使用本技能。发布流程必须更新版本号和 `CHANGELOG.md`，必须把 npm tarball 生成到 `dist/`，必须创建 annotated tag，必须推送当前分支和 tag 到 `origin`。
+只在 `mihoro-cli` 使用本技能。发布流程必须更新版本号和 `CHANGELOG.md`，必须把 npm tarball 生成到 `dist/`，必须创建 annotated tag，必须推送当前分支和 tag 到 `origin`。
 
 如果任何检查、验证、打包、提交、tag 或推送步骤失败，立即停止并报告具体失败点。禁止在失败后继续后续发布动作。
 
