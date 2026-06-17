@@ -16,6 +16,23 @@ export interface TableOptions {
 export function formatTable(options: TableOptions): string {
   const table = new Table({
     head: options.head,
+    chars: {
+      top: '─',
+      'top-mid': '┬',
+      'top-left': '╭',
+      'top-right': '╮',
+      bottom: '─',
+      'bottom-mid': '┴',
+      'bottom-left': '╰',
+      'bottom-right': '╯',
+      left: '│',
+      'left-mid': '├',
+      mid: '─',
+      'mid-mid': '┼',
+      right: '│',
+      'right-mid': '┤',
+      middle: '│'
+    },
     style: {
       head: [],
       border: []

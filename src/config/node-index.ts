@@ -86,7 +86,7 @@ export async function refreshNodeIndexForSubscription(
       const hash = node.hash || hashNodeName(subscriptionId, node.name)
       const entry: NodeIndexEntry = {
         hash,
-        shortHash: node.shortHash || shortNodeHash(hash),
+        shortHash: shortNodeHash(node.shortHash || hash),
         name: node.name,
         type: node.type,
         groups: Array.isArray(node.groups) ? node.groups : []
@@ -204,7 +204,7 @@ function normalizeNodeIndexEntry(value: unknown): NodeIndexEntry | undefined {
   if (typeof raw.hash !== 'string' || typeof raw.name !== 'string') return undefined
   return {
     hash: raw.hash,
-    shortHash: typeof raw.shortHash === 'string' ? raw.shortHash : shortNodeHash(raw.hash),
+    shortHash: shortNodeHash(typeof raw.shortHash === 'string' ? raw.shortHash : raw.hash),
     name: raw.name,
     type: typeof raw.type === 'string' ? raw.type : undefined,
     groups: Array.isArray(raw.groups) ? raw.groups.filter((group): group is string => typeof group === 'string') : []

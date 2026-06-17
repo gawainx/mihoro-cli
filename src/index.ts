@@ -259,7 +259,7 @@ function createProgram(): Command {
         await useGroupNode(options.group, node.name)
         await saveDefaultNodeHashForSubscription(current.id, options.group, node.hash)
         console.log(`Proxy group switched: ${options.group} -> ${node.shortHash} (${node.name})`)
-        console.log(`Default node hash saved for future starts: ${options.group} -> ${node.hash}`)
+        console.log(`Default node hash saved for future starts: ${options.group} -> ${node.shortHash}`)
       })
     )
 
@@ -286,7 +286,7 @@ function createProgram(): Command {
       await useGroupNode(groupName, node.name)
       await saveDefaultNodeHashForSubscription(current.id, groupName, node.hash)
       console.log(`Proxy group switched: ${groupName} -> ${node.shortHash} (${node.name})`)
-      console.log(`Default node hash saved for future starts: ${groupName} -> ${node.hash}`)
+      console.log(`Default node hash saved for future starts: ${groupName} -> ${node.shortHash}`)
     })
   )
 

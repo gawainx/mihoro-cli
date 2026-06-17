@@ -44,6 +44,11 @@ test('hashNodeName creates stable subscription-scoped sha256 hashes', () => {
   assert.equal(shortNodeHash(first), first.slice(0, 8))
 })
 
+test('shortNodeHash always returns an 8-character display hash', () => {
+  assert.equal(shortNodeHash('abcdef0011111111111111111111111111111111111111111111111111111111'), 'abcdef00')
+  assert.equal(shortNodeHash('abcdef'), 'abcdef')
+})
+
 test('refreshNodeIndexForSubscription writes current subscription node index', async (t) => {
   await withMihoroHome(t)
 
@@ -55,6 +60,21 @@ test('refreshNodeIndexForSubscription writes current subscription node index', a
   assert.equal(index.nodes[firstHash].name, 'HK 01')
   assert.deepEqual(index.nodes[firstHash].groups, ['Proxy', 'Auto'])
   assert.equal(file.subscriptions['sub-a'].nodes[firstHash].name, 'HK 01')
+})
+
+test('refreshNodeIndexForSubscription normalizes controlled short hashes to 8 characters', async (t) => {
+  await withMihoroHome(t)
+
+  const index = await refreshNodeIndexForSubscription('sub-a', [
+    {
+      name: 'Node A',
+      hash: 'abcdef0011111111111111111111111111111111111111111111111111111111',
+      shortHash: 'abcdef001111',
+      groups: []
+    }
+  ])
+
+  assert.equal(index.nodes.abcdef0011111111111111111111111111111111111111111111111111111111.shortHash, 'abcdef00')
 })
 
 test('resolveNodeHash accepts unique hash prefixes and rejects node names', async (t) => {
