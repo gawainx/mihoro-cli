@@ -25,6 +25,7 @@ import { showInfo } from './info.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources } from './mihomo/geodata.js'
 import { packageInfo } from './lib/package-info.js'
+import { formatTable } from './lib/table.js'
 
 /**
  * Runs an async command handler with consistent CLI error handling.
@@ -82,10 +83,10 @@ function createProgram(): Command {
         return
       }
       console.log(`Configured subscriptions: ${state.items.length}`)
-      for (const item of state.items) {
-        const marker = state.current === item.id ? '*' : ' '
-        console.log(`${marker} ${item.id}\tname=${item.name}\tupdated=${item.updatedAt}`)
-      }
+      console.log(formatTable({
+        head: ['Current', 'ID', 'Name', 'Updated'],
+        rows: state.items.map((item) => [state.current === item.id ? '*' : '', item.id, item.name, item.updatedAt])
+      }))
     })
   )
   sub.command('add').argument('<name>').argument('<url>').description('Add a subscription').action((name: string, url: string) =>
@@ -180,7 +181,10 @@ function createProgram(): Command {
       const resources = await ensureGeodataResources()
       const downloaded = resources.filter((item) => item.downloaded).length
       console.log(`GeoData resources ready: ${resources.length} files (${downloaded} downloaded)`)
-      for (const item of resources) console.log(`${item.fileName}\t${item.downloaded ? 'downloaded' : 'already-present'}\t${item.path}`)
+      console.log(formatTable({
+        head: ['File', 'Status', 'Path'],
+        rows: resources.map((item) => [item.fileName, item.downloaded ? 'downloaded' : 'already-present', item.path])
+      }))
     })
   )
   geo.command('update').description('Ask running mihomo to update GeoData databases').action(() =>
@@ -213,7 +217,10 @@ function createProgram(): Command {
         throw new MihoroError('GeoData URLs are not configured.')
       }
       console.log('Configured GeoData update URLs:')
-      for (const [key, value] of Object.entries(geoxUrl)) console.log(`${key}\t${String(value)}`)
+      console.log(formatTable({
+        head: ['Key', 'URL'],
+        rows: Object.entries(geoxUrl).map(([key, value]) => [key, String(value)])
+      }))
     })
   )
 
@@ -228,9 +235,15 @@ function createProgram(): Command {
       }
       const index = await refreshNodeIndexForSubscription(current.id, nodes)
       console.log(`Selectable nodes: ${nodes.length}`)
-      for (const item of Object.values(index.nodes)) {
-        console.log(`${item.shortHash}\tname=${item.name}\ttype=${item.type || 'unknown'}\tgroups=${item.groups.join(',') || 'none'}`)
-      }
+      console.log(formatTable({
+        head: ['Hash', 'Name', 'Type', 'Groups'],
+        rows: Object.values(index.nodes).map((item) => [
+          item.shortHash,
+          item.name,
+          item.type || 'unknown',
+          item.groups.join(',') || 'none'
+        ])
+      }))
     })
   )
   node
@@ -259,7 +272,10 @@ function createProgram(): Command {
         return
       }
       console.log(`Visible proxy groups: ${groups.length}`)
-      for (const item of groups) console.log(`${item.name}\tselected=${item.now || 'unknown'}\toptions=${item.all?.join(',') || 'none'}`)
+      console.log(formatTable({
+        head: ['Group', 'Selected', 'Options'],
+        rows: groups.map((item) => [item.name, item.now || 'unknown', item.all?.join(',') || 'none'])
+      }))
     })
   )
   group.command('use').argument('<group>').argument('<node-hash>').description('Switch proxy group node hash').action((groupName: string, nodeHash: string) =>
