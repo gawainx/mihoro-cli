@@ -145,18 +145,18 @@ Node and group commands:
 
 ```bash
 # List available proxy nodes reported by the running mihomo API.
-# Output columns are node name, node type, and proxy groups that can select the node.
+# Output columns include the mihoro node hash, original node name, node type, and selectable proxy groups.
 mihoro-cli node list
 
-# Switch a proxy group to a specific node from the node command, then remember that default selection.
+# Switch a proxy group to a specific node hash from the node command, then remember that default selection.
 # The --group option is required so mihoro-cli does not guess which proxy group should change.
-mihoro-cli node use <node> --group <group>
+mihoro-cli node use <node-hash> --group <group>
 
 # List proxy groups, their current selected node, and available node choices.
 mihoro-cli group list
 
-# Switch a proxy group to a specific node, then remember that default selection.
-mihoro-cli group use <group> <node>
+# Switch a proxy group to a specific node hash, then remember that default selection.
+mihoro-cli group use <group> <node-hash>
 ```
 
 ## Data

@@ -6,7 +6,8 @@ import { switchSubscription } from './config/subscription-switch.js'
 import { generateRuntimeConfig } from './config/runtime.js'
 import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
 import { assertGroupCanUseNode, listGroups, listNodesWithGroups, upgradeGeo, useGroupNode } from './mihomo/api.js'
-import { saveDefaultNodeForSubscription } from './config/state.js'
+import { saveDefaultNodeHashForSubscription } from './config/state.js'
+import { refreshNodeIndexForSubscription, resolveNodeHash } from './config/node-index.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import {
   formatRestartedService,
@@ -219,28 +220,33 @@ function createProgram(): Command {
   const node = program.command('node').description('Manage nodes')
   node.command('list').description('List available nodes').action(() =>
     run(async () => {
+      const current = await currentSubscription()
       const nodes = await listNodesWithGroups()
       if (nodes.length === 0) {
         console.log('No selectable nodes are available from the running mihomo API.')
         return
       }
+      const index = await refreshNodeIndexForSubscription(current.id, nodes)
       console.log(`Selectable nodes: ${nodes.length}`)
-      for (const item of nodes) console.log(`${item.name}\ttype=${item.type || 'unknown'}\tgroups=${item.groups.join(',') || 'none'}`)
+      for (const item of Object.values(index.nodes)) {
+        console.log(`${item.shortHash}\tname=${item.name}\ttype=${item.type || 'unknown'}\tgroups=${item.groups.join(',') || 'none'}`)
+      }
     })
   )
   node
     .command('use')
-    .argument('<node>')
+    .argument('<node-hash>')
     .requiredOption('--group <group>', 'proxy group to switch')
-    .description('Switch a proxy group to a node')
-    .action((nodeName: string, options: { group: string }) =>
+    .description('Switch a proxy group to a node hash')
+    .action((nodeHash: string, options: { group: string }) =>
       run(async () => {
-        await assertGroupCanUseNode(options.group, nodeName)
-        await useGroupNode(options.group, nodeName)
         const current = await currentSubscription()
-        await saveDefaultNodeForSubscription(current.id, options.group, nodeName)
-        console.log(`Proxy group switched: ${options.group} -> ${nodeName}`)
-        console.log(`Default node saved for future starts: ${options.group} -> ${nodeName}`)
+        const node = await resolveNodeHash(current.id, nodeHash, () => refreshNodeIndexForSubscription(current.id, listNodesWithGroups))
+        await assertGroupCanUseNode(options.group, node.name)
+        await useGroupNode(options.group, node.name)
+        await saveDefaultNodeHashForSubscription(current.id, options.group, node.hash)
+        console.log(`Proxy group switched: ${options.group} -> ${node.shortHash} (${node.name})`)
+        console.log(`Default node hash saved for future starts: ${options.group} -> ${node.hash}`)
       })
     )
 
@@ -256,13 +262,15 @@ function createProgram(): Command {
       for (const item of groups) console.log(`${item.name}\tselected=${item.now || 'unknown'}\toptions=${item.all?.join(',') || 'none'}`)
     })
   )
-  group.command('use').argument('<group>').argument('<node>').description('Switch proxy group node').action((groupName: string, nodeName: string) =>
+  group.command('use').argument('<group>').argument('<node-hash>').description('Switch proxy group node hash').action((groupName: string, nodeHash: string) =>
     run(async () => {
-      await useGroupNode(groupName, nodeName)
       const current = await currentSubscription()
-      await saveDefaultNodeForSubscription(current.id, groupName, nodeName)
-      console.log(`Proxy group switched: ${groupName} -> ${nodeName}`)
-      console.log(`Default node saved for future starts: ${groupName} -> ${nodeName}`)
+      const node = await resolveNodeHash(current.id, nodeHash, () => refreshNodeIndexForSubscription(current.id, listNodesWithGroups))
+      await assertGroupCanUseNode(groupName, node.name)
+      await useGroupNode(groupName, node.name)
+      await saveDefaultNodeHashForSubscription(current.id, groupName, node.hash)
+      console.log(`Proxy group switched: ${groupName} -> ${node.shortHash} (${node.name})`)
+      console.log(`Default node hash saved for future starts: ${groupName} -> ${node.hash}`)
     })
   )
 

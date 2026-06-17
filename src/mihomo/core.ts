@@ -7,11 +7,12 @@ import { pipeline } from 'node:stream/promises'
 import { coreDir, managedCorePath, pidPath, socketPath, workDir } from '../lib/paths.js'
 import { MihoroError } from '../lib/errors.js'
 import { generateRuntimeConfig } from '../config/runtime.js'
-import { waitForMihomoReady, useGroupNode } from './api.js'
-import { readConfig, readDefaultNodesForSubscription } from '../config/state.js'
+import { listNodesWithGroups, waitForMihomoReady, useGroupNode } from './api.js'
+import { readConfig, resolveDefaultNodeHashesForSubscription } from '../config/state.js'
 import { ensureGeodataResources } from './geodata.js'
 import { readControlledConfig } from '../config/controlled.js'
 import { currentSubscription } from '../config/subscriptions.js'
+import { refreshNodeIndexForSubscription, resolveNodeHash } from '../config/node-index.js'
 
 const mihomoAssetMap: Record<string, string> = {
   'darwin-x64': 'mihomo-darwin-amd64-compatible',
@@ -290,8 +291,10 @@ async function pidOwnsSocketInode(pid: number, inode: string): Promise<boolean> 
  */
 async function applyDefaultNodes(): Promise<void> {
   const current = await currentSubscription()
-  const defaultNodes = await readDefaultNodesForSubscription(current.id)
-  for (const [group, node] of Object.entries(defaultNodes)) {
-    await useGroupNode(group, node)
+  await refreshNodeIndexForSubscription(current.id, listNodesWithGroups)
+  const defaultNodes = await resolveDefaultNodeHashesForSubscription(current.id)
+  for (const [group, nodeHash] of Object.entries(defaultNodes)) {
+    const node = await resolveNodeHash(current.id, nodeHash)
+    await useGroupNode(group, node.name)
   }
 }
