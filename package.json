@@ -1,13 +1,14 @@
 {
   "name": "mihoro-cli",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Standalone mihomo CLI based on the Clash Party runtime model.",
   "type": "module",
   "bin": {
     "mihoro-cli": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/*.tgz"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
