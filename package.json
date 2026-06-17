@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepare": "npm run build",
     "pack:dist": "pnpm pack --pack-destination dist",
