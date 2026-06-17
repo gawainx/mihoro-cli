@@ -3,6 +3,7 @@ AGENTS.local.md
 node_modules/
 .pnpm-store/
 dist/
+releases/
 *.tgz
 .DS_Store
 *.log

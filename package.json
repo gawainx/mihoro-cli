@@ -15,7 +15,8 @@
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepare": "npm run build",
-    "pack:dist": "pnpm pack --pack-destination dist",
+    "pack:release": "pnpm pack --pack-destination releases",
+    "pack:dist": "pnpm run pack:release",
     "install:global": "bash scripts/build-install.sh",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"

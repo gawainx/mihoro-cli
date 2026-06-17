@@ -188,8 +188,8 @@ pnpm run typecheck
 # Compile TypeScript into dist/ and prepare the executable bin file.
 pnpm run build
 
-# Create the npm tarball under dist/ without writing package artifacts to the project root.
-pnpm run pack:dist
+# Create the npm tarball under releases/ without writing package artifacts to the project root.
+pnpm run pack:release
 
 # Run the CLI directly from TypeScript during development and print help.
 pnpm run dev --help
