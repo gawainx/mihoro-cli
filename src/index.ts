@@ -26,6 +26,7 @@ import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources } from './mihomo/geodata.js'
 import { packageInfo } from './lib/package-info.js'
 import { formatTable } from './lib/table.js'
+import { testProxyUrl } from './diagnostics/proxy-test.js'
 
 /**
  * Runs an async command handler with consistent CLI error handling.
@@ -135,6 +136,27 @@ function createProgram(): Command {
   )
 
   program.command('info').description('Show current mihoro and mihomo info').action(() => run(async () => console.log(await showInfo())))
+
+  program.command('test').argument('<url>').description('Test a URL through the mihoro proxy path').action((url: string) =>
+    run(async () => {
+      const result = await testProxyUrl(url)
+      console.log(`Target: ${result.target}`)
+      if (result.proxyEndpoint) console.log(`Proxy: ${result.proxyEndpoint}`)
+      console.log('')
+      console.log(formatTable({
+        head: ['Step', 'Status', 'Time', 'Detail'],
+        rows: result.steps.map((step) => [
+          step.name,
+          step.status,
+          typeof step.durationMs === 'number' ? `${step.durationMs}ms` : '-',
+          step.detail
+        ])
+      }))
+      console.log('')
+      console.log(`Result: ${result.summary}`)
+      process.exitCode = result.exitCode
+    })
+  )
 
   const proxy = program.command('proxy').description('Manage system proxy')
   proxy

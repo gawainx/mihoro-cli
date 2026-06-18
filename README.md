@@ -57,6 +57,9 @@ mihoro-cli proxy enable
 # Show service state, proxy mode, selected nodes, and listening ports.
 mihoro-cli info
 
+# Test a URL through the mihoro/mihomo proxy path without changing service or proxy settings.
+mihoro-cli test https://example.com
+
 # Print whether the mihomo core process is currently running.
 mihoro-cli service status
 ```
@@ -76,6 +79,14 @@ Info command:
 # Show current service state, active subscription, proxy mode, system proxy target,
 # mixed-port, TUN state/options, and running proxy group selections when mihomo is available.
 mihoro-cli info
+```
+
+Diagnostic command:
+
+```bash
+# Test a URL through mihoro's configured mihomo mixed-port proxy.
+# The command prints each diagnostic step and does not start, restart, or reconfigure mihomo.
+mihoro-cli test <url>
 ```
 
 Subscription commands:
