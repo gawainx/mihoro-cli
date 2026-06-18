@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here.
 
+## v0.1.7 - 2026-06-18
+
+- Fixed node hash display length normalization.
+- Changed release packaging so npm tarballs are generated under `releases/`.
+- Removed the legacy release tarball generation script for `dist/`.
+
 ## v0.1.6 - 2026-06-17
 
 - Added mihoro-managed node hash indexes with SHA-256 full hashes, 8-character display hashes, and hash-prefix node resolution.
