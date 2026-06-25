@@ -1,21 +1,21 @@
 {
   "name": "mihoro-cli",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Standalone mihomo CLI based on the Clash Party runtime model.",
   "type": "module",
   "bin": {
     "mihoro-cli": "./dist/index.js"
   },
   "files": [
-    "dist/**/*.js",
-    "dist/**/*.d.ts",
-    "dist/**/*.js.map"
+    "dist",
+    "!dist/*.tgz"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/prepare-bin.mjs",
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepare": "npm run build",
-    "pack:dist": "pnpm pack --pack-destination dist",
+    "pack:release": "pnpm pack --pack-destination releases",
     "install:global": "bash scripts/build-install.sh",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts"
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "axios": "^1.18.0",
+    "cli-table3": "^0.6.5",
     "commander": "^15.0.0",
     "yaml": "^2.9.0"
   },

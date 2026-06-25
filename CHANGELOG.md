@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## v0.1.7 - 2026-06-18
+
+- Fixed node hash display length normalization.
+- Changed release packaging so npm tarballs are generated under `releases/`.
+- Removed the legacy release tarball generation script for `dist/`.
+
+## v0.1.6 - 2026-06-17
+
+- Added mihoro-managed node hash indexes with SHA-256 full hashes, 8-character display hashes, and hash-prefix node resolution.
+- Added hash-only node selection for `node use` and `group use`, with default node preferences saved as full hashes and legacy node-name migration.
+- Added formatted table output for subscription, node, group, GeoData resource, and GeoData URL list commands.
+- Fixed plain object CLI error formatting so API object errors no longer print as `[object Object]`.
+- Documented the node hash index requirements, design, and implementation plan.
+
 ## v0.1.5 - 2026-06-16
 
 - Added subscription switching runtime synchronization so `sub use` refreshes runtime config and restarts a running mihomo core.

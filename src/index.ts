@@ -6,7 +6,8 @@ import { switchSubscription } from './config/subscription-switch.js'
 import { generateRuntimeConfig } from './config/runtime.js'
 import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
 import { assertGroupCanUseNode, listGroups, listNodesWithGroups, upgradeGeo, useGroupNode } from './mihomo/api.js'
-import { saveDefaultNodeForSubscription } from './config/state.js'
+import { saveDefaultNodeHashForSubscription } from './config/state.js'
+import { refreshNodeIndexForSubscription, resolveNodeHash } from './config/node-index.js'
 import { enableSystemProxy, disableSystemProxy } from './system/proxy.js'
 import {
   formatRestartedService,
@@ -24,6 +25,8 @@ import { showInfo } from './info.js'
 import { errorMessage, MihoroError } from './lib/errors.js'
 import { ensureGeodataResources } from './mihomo/geodata.js'
 import { packageInfo } from './lib/package-info.js'
+import { formatTable } from './lib/table.js'
+import { testProxyUrl } from './diagnostics/proxy-test.js'
 
 /**
  * Runs an async command handler with consistent CLI error handling.
@@ -81,10 +84,10 @@ function createProgram(): Command {
         return
       }
       console.log(`Configured subscriptions: ${state.items.length}`)
-      for (const item of state.items) {
-        const marker = state.current === item.id ? '*' : ' '
-        console.log(`${marker} ${item.id}\tname=${item.name}\tupdated=${item.updatedAt}`)
-      }
+      console.log(formatTable({
+        head: ['Current', 'ID', 'Name', 'Updated'],
+        rows: state.items.map((item) => [state.current === item.id ? '*' : '', item.id, item.name, item.updatedAt])
+      }))
     })
   )
   sub.command('add').argument('<name>').argument('<url>').description('Add a subscription').action((name: string, url: string) =>
@@ -134,6 +137,27 @@ function createProgram(): Command {
 
   program.command('info').description('Show current mihoro and mihomo info').action(() => run(async () => console.log(await showInfo())))
 
+  program.command('test').argument('<url>').description('Test a URL through the mihoro proxy path').action((url: string) =>
+    run(async () => {
+      const result = await testProxyUrl(url)
+      console.log(`Target: ${result.target}`)
+      if (result.proxyEndpoint) console.log(`Proxy: ${result.proxyEndpoint}`)
+      console.log('')
+      console.log(formatTable({
+        head: ['Step', 'Status', 'Time', 'Detail'],
+        rows: result.steps.map((step) => [
+          step.name,
+          step.status,
+          typeof step.durationMs === 'number' ? `${step.durationMs}ms` : '-',
+          step.detail
+        ])
+      }))
+      console.log('')
+      console.log(`Result: ${result.summary}`)
+      process.exitCode = result.exitCode
+    })
+  )
+
   const proxy = program.command('proxy').description('Manage system proxy')
   proxy
     .command('enable')
@@ -179,7 +203,10 @@ function createProgram(): Command {
       const resources = await ensureGeodataResources()
       const downloaded = resources.filter((item) => item.downloaded).length
       console.log(`GeoData resources ready: ${resources.length} files (${downloaded} downloaded)`)
-      for (const item of resources) console.log(`${item.fileName}\t${item.downloaded ? 'downloaded' : 'already-present'}\t${item.path}`)
+      console.log(formatTable({
+        head: ['File', 'Status', 'Path'],
+        rows: resources.map((item) => [item.fileName, item.downloaded ? 'downloaded' : 'already-present', item.path])
+      }))
     })
   )
   geo.command('update').description('Ask running mihomo to update GeoData databases').action(() =>
@@ -212,35 +239,49 @@ function createProgram(): Command {
         throw new MihoroError('GeoData URLs are not configured.')
       }
       console.log('Configured GeoData update URLs:')
-      for (const [key, value] of Object.entries(geoxUrl)) console.log(`${key}\t${String(value)}`)
+      console.log(formatTable({
+        head: ['Key', 'URL'],
+        rows: Object.entries(geoxUrl).map(([key, value]) => [key, String(value)])
+      }))
     })
   )
 
   const node = program.command('node').description('Manage nodes')
   node.command('list').description('List available nodes').action(() =>
     run(async () => {
+      const current = await currentSubscription()
       const nodes = await listNodesWithGroups()
       if (nodes.length === 0) {
         console.log('No selectable nodes are available from the running mihomo API.')
         return
       }
+      const index = await refreshNodeIndexForSubscription(current.id, nodes)
       console.log(`Selectable nodes: ${nodes.length}`)
-      for (const item of nodes) console.log(`${item.name}\ttype=${item.type || 'unknown'}\tgroups=${item.groups.join(',') || 'none'}`)
+      console.log(formatTable({
+        head: ['Hash', 'Name', 'Type', 'Groups'],
+        rows: Object.values(index.nodes).map((item) => [
+          item.shortHash,
+          item.name,
+          item.type || 'unknown',
+          item.groups.join(',') || 'none'
+        ])
+      }))
     })
   )
   node
     .command('use')
-    .argument('<node>')
+    .argument('<node-hash>')
     .requiredOption('--group <group>', 'proxy group to switch')
-    .description('Switch a proxy group to a node')
-    .action((nodeName: string, options: { group: string }) =>
+    .description('Switch a proxy group to a node hash')
+    .action((nodeHash: string, options: { group: string }) =>
       run(async () => {
-        await assertGroupCanUseNode(options.group, nodeName)
-        await useGroupNode(options.group, nodeName)
         const current = await currentSubscription()
-        await saveDefaultNodeForSubscription(current.id, options.group, nodeName)
-        console.log(`Proxy group switched: ${options.group} -> ${nodeName}`)
-        console.log(`Default node saved for future starts: ${options.group} -> ${nodeName}`)
+        const node = await resolveNodeHash(current.id, nodeHash, () => refreshNodeIndexForSubscription(current.id, listNodesWithGroups))
+        await assertGroupCanUseNode(options.group, node.name)
+        await useGroupNode(options.group, node.name)
+        await saveDefaultNodeHashForSubscription(current.id, options.group, node.hash)
+        console.log(`Proxy group switched: ${options.group} -> ${node.shortHash} (${node.name})`)
+        console.log(`Default node hash saved for future starts: ${options.group} -> ${node.shortHash}`)
       })
     )
 
@@ -253,16 +294,21 @@ function createProgram(): Command {
         return
       }
       console.log(`Visible proxy groups: ${groups.length}`)
-      for (const item of groups) console.log(`${item.name}\tselected=${item.now || 'unknown'}\toptions=${item.all?.join(',') || 'none'}`)
+      console.log(formatTable({
+        head: ['Group', 'Selected', 'Options'],
+        rows: groups.map((item) => [item.name, item.now || 'unknown', item.all?.join(',') || 'none'])
+      }))
     })
   )
-  group.command('use').argument('<group>').argument('<node>').description('Switch proxy group node').action((groupName: string, nodeName: string) =>
+  group.command('use').argument('<group>').argument('<node-hash>').description('Switch proxy group node hash').action((groupName: string, nodeHash: string) =>
     run(async () => {
-      await useGroupNode(groupName, nodeName)
       const current = await currentSubscription()
-      await saveDefaultNodeForSubscription(current.id, groupName, nodeName)
-      console.log(`Proxy group switched: ${groupName} -> ${nodeName}`)
-      console.log(`Default node saved for future starts: ${groupName} -> ${nodeName}`)
+      const node = await resolveNodeHash(current.id, nodeHash, () => refreshNodeIndexForSubscription(current.id, listNodesWithGroups))
+      await assertGroupCanUseNode(groupName, node.name)
+      await useGroupNode(groupName, node.name)
+      await saveDefaultNodeHashForSubscription(current.id, groupName, node.hash)
+      console.log(`Proxy group switched: ${groupName} -> ${node.shortHash} (${node.name})`)
+      console.log(`Default node hash saved for future starts: ${groupName} -> ${node.shortHash}`)
     })
   )
 

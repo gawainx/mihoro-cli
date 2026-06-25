@@ -1,12 +1,14 @@
 import { configPath } from '../lib/paths.js'
 import type { MihoroConfig } from '../lib/types.js'
 import { readYaml, writeYaml } from '../lib/yaml.js'
+import { readNodeIndexes, resolveNodeHash } from './node-index.js'
 
 const defaultConfig: MihoroConfig = {
   proxyHost: '127.0.0.1',
   proxyBypass: ['localhost', '127.0.0.1', '192.168.0.0/16', '10.0.0.0/8', '172.16.0.0/12', '::1'],
   defaultNodes: {},
-  subscriptionDefaultNodes: {}
+  subscriptionDefaultNodes: {},
+  subscriptionDefaultNodeHashes: {}
 }
 
 /**
@@ -20,7 +22,8 @@ export async function readConfig(): Promise<MihoroConfig> {
     proxyHost: config.proxyHost || defaultConfig.proxyHost,
     proxyBypass: Array.isArray(config.proxyBypass) ? config.proxyBypass : defaultConfig.proxyBypass,
     defaultNodes: normalizeNodeMap(config.defaultNodes),
-    subscriptionDefaultNodes: normalizeSubscriptionNodeMap(config.subscriptionDefaultNodes)
+    subscriptionDefaultNodes: normalizeSubscriptionNodeMap(config.subscriptionDefaultNodes),
+    subscriptionDefaultNodeHashes: normalizeSubscriptionNodeMap(config.subscriptionDefaultNodeHashes)
   }
 }
 
@@ -85,6 +88,95 @@ export async function saveDefaultNodeForSubscription(
       }
     }
   })
+}
+
+/**
+ * Reads default node hashes for one subscription.
+ *
+ * @param subscriptionId Current subscription id.
+ * @returns Default full node hashes for the subscription.
+ */
+export async function readDefaultNodeHashesForSubscription(subscriptionId: string): Promise<Record<string, string>> {
+  const config = await readConfig()
+  return config.subscriptionDefaultNodeHashes[subscriptionId] || {}
+}
+
+/**
+ * Resolves default node selections to full hashes, migrating legacy node names when possible.
+ *
+ * @param subscriptionId Current subscription id.
+ * @returns Default full node hashes for the subscription.
+ */
+export async function resolveDefaultNodeHashesForSubscription(subscriptionId: string): Promise<Record<string, string>> {
+  const config = await readConfig()
+  const currentHashes = config.subscriptionDefaultNodeHashes[subscriptionId]
+  if (currentHashes && Object.keys(currentHashes).length > 0) return currentHashes
+
+  const legacy = config.subscriptionDefaultNodes[subscriptionId] || config.defaultNodes
+  const migrated = await resolveLegacyDefaultNodes(subscriptionId, legacy)
+  if (Object.keys(migrated).length === 0) return {}
+  await updateConfig((next) => ({
+    ...next,
+    subscriptionDefaultNodeHashes: {
+      ...next.subscriptionDefaultNodeHashes,
+      [subscriptionId]: migrated
+    }
+  }))
+  return migrated
+}
+
+/**
+ * Saves a default node hash selection for one subscription.
+ *
+ * @param subscriptionId Current subscription id.
+ * @param group Proxy group name.
+ * @param nodeHash Full node hash selected for the group.
+ * @returns Updated mihoro config.
+ */
+export async function saveDefaultNodeHashForSubscription(
+  subscriptionId: string,
+  group: string,
+  nodeHash: string
+): Promise<MihoroConfig> {
+  return updateConfig((config) => {
+    const currentDefaults = config.subscriptionDefaultNodeHashes[subscriptionId] || {}
+    return {
+      ...config,
+      subscriptionDefaultNodeHashes: {
+        ...config.subscriptionDefaultNodeHashes,
+        [subscriptionId]: {
+          ...currentDefaults,
+          [group]: nodeHash
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Resolves legacy default node values to full hashes.
+ *
+ * @param subscriptionId Current subscription id.
+ * @param legacy Legacy group to node value map.
+ * @returns Group to full hash map.
+ */
+async function resolveLegacyDefaultNodes(subscriptionId: string, legacy: Record<string, string>): Promise<Record<string, string>> {
+  const indexes = await readNodeIndexes()
+  const entries = Object.values(indexes.subscriptions[subscriptionId]?.nodes || {})
+  const resolved: Record<string, string> = {}
+  for (const [group, value] of Object.entries(legacy)) {
+    const byName = entries.find((entry) => entry.name === value)
+    if (byName) {
+      resolved[group] = byName.hash
+      continue
+    }
+    try {
+      resolved[group] = (await resolveNodeHash(subscriptionId, value)).hash
+    } catch {
+      // Ignore stale legacy values. Runtime application reports missing saved hashes later.
+    }
+  }
+  return resolved
 }
 
 /**

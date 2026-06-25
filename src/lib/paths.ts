@@ -120,6 +120,15 @@ export function controlledConfigPath(): string {
 }
 
 /**
+ * Returns the CLI node index JSON path.
+ *
+ * @returns Absolute JSON node index path.
+ */
+export function nodeIndexesPath(): string {
+  return path.join(dataDir(), 'node-indexes.json')
+}
+
+/**
  * Returns the log directory.
  *
  * @returns Absolute path to the log directory.

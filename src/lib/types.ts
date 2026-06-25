@@ -29,8 +29,10 @@ export interface MihoroConfig {
   proxyBypass: string[]
   /** Legacy preferred node by proxy group, used as fallback for older config files. */
   defaultNodes: Record<string, string>
-  /** Preferred node by proxy group scoped by subscription id. */
+  /** Legacy preferred node name by proxy group scoped by subscription id. */
   subscriptionDefaultNodes: Record<string, Record<string, string>>
+  /** Preferred full node hash by proxy group scoped by subscription id. */
+  subscriptionDefaultNodeHashes: Record<string, Record<string, string>>
 }
 
 export interface MihomoProxy {
@@ -49,4 +51,29 @@ export interface MihomoProxy {
 export interface MihomoProxiesResponse {
   /** Proxy map returned by GET /proxies. */
   proxies: Record<string, MihomoProxy>
+}
+
+export interface NodeIndexEntry {
+  /** Full SHA-256 hash used as mihoro-cli node id. */
+  hash: string
+  /** Default 8-character display hash prefix. */
+  shortHash: string
+  /** Original mihomo node name. */
+  name: string
+  /** Mihomo proxy type when available. */
+  type?: string
+  /** Visible proxy groups that can select this node. */
+  groups: string[]
+}
+
+export interface SubscriptionNodeIndex {
+  /** ISO timestamp for the last index refresh. */
+  updatedAt: string
+  /** Node index entries keyed by full hash. */
+  nodes: Record<string, NodeIndexEntry>
+}
+
+export interface NodeIndexFile {
+  /** Node indexes scoped by subscription id. */
+  subscriptions: Record<string, SubscriptionNodeIndex>
 }

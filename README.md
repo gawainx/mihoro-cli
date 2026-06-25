@@ -2,6 +2,12 @@
 
 Standalone CLI for importing Clash Party config, running `mihomo`, and controlling proxy nodes from the terminal.
 
+## Requirements
+
+- Node.js 20 or newer.
+- macOS or Linux.
+- Optional system `mihomo` executable in `PATH`. If it is missing, mihoro-cli downloads a managed mihomo binary for the current platform on first start.
+
 ## Install
 
 Install directly from Git:
@@ -36,15 +42,23 @@ pnpm run install:global
 ## Quick Start
 
 ```bash
-# Import profiles and controlled mihomo settings from an existing Clash Party data directory.
+# Import profiles and controlled mihomo settings from an existing Clash Party data directory,
+# then generate the mihomo runtime config.
 mihoro-cli import clash-party <clash-party-data-dir>
 
+# Or add a remote mihomo subscription directly.
+mihoro-cli sub add <name> <url>
+
 # Enable the operating system manual proxy in rules mode.
-# This starts mihomo when needed, or restarts it when already running so runtime config changes apply.
+# This saves the routing mode, regenerates runtime config, starts or restarts mihomo,
+# verifies the mixed-port listener, and updates OS HTTP, HTTPS, and SOCKS proxy settings.
 mihoro-cli proxy enable
 
 # Show service state, proxy mode, selected nodes, and listening ports.
 mihoro-cli info
+
+# Test a URL through the mihoro/mihomo proxy path without changing service or proxy settings.
+mihoro-cli test https://example.com
 
 # Print whether the mihomo core process is currently running.
 mihoro-cli service status
@@ -67,16 +81,26 @@ Info command:
 mihoro-cli info
 ```
 
+Diagnostic command:
+
+```bash
+# Test a URL through mihoro's configured mihomo mixed-port proxy.
+# The command prints each diagnostic step and does not start, restart, or reconfigure mihomo.
+mihoro-cli test <url>
+```
+
 Subscription commands:
 
 ```bash
 # Show all saved subscriptions. The current subscription is marked with `*`.
 mihoro-cli sub list
 
-# Add a subscription by display name and remote URL, then regenerate the runtime config.
+# Add or replace a remote subscription by display name and URL, then regenerate the runtime config.
+# The saved id is generated from the display name.
 mihoro-cli sub add <name> <url>
 
-# Select a subscription by name or internal id, then regenerate the runtime config.
+# Select a subscription by name or id, regenerate the runtime config,
+# and restart mihomo when the managed service is already running.
 mihoro-cli sub use <name-or-id>
 
 # Remove a subscription by name or internal id.
@@ -91,6 +115,8 @@ Service commands:
 mihoro-cli service install
 
 # Start the mihomo core process in the background.
+# Startup generates runtime/config.yaml, prepares GeoData database files,
+# launches mihomo with the runtime directory and Unix API socket, then reapplies saved group defaults.
 mihoro-cli service start
 
 # Stop the running mihomo core process.
@@ -105,7 +131,7 @@ System proxy and TUN commands:
 
 ```bash
 # Start or restart mihomo, wait for its mixed-port, then enable OS manual HTTP, HTTPS, and SOCKS proxy settings.
-# The proxy host comes from mihoro config, and the port comes from mihomo mixed-port.
+# The proxy host comes from mihoro config, and the port comes from controlled mihomo mixed-port.
 # The default routing mode is rules.
 mihoro-cli proxy enable
 
@@ -116,6 +142,7 @@ mihoro-cli proxy enable --kind <rules|global|direct>
 mihoro-cli proxy disable
 
 # Enable TUN mode in the generated mihomo runtime config.
+# This also keeps DNS enabled in the controlled config.
 mihoro-cli tun enable
 
 # Disable TUN mode in the generated mihomo runtime config.
@@ -145,19 +172,22 @@ Node and group commands:
 
 ```bash
 # List available proxy nodes reported by the running mihomo API.
-# Output columns are node name, node type, and proxy groups that can select the node.
+# Output columns include the mihoro node hash, original node name, node type, and selectable proxy groups.
+# Listing nodes refreshes the node hash index for the current subscription.
 mihoro-cli node list
 
-# Switch a proxy group to a specific node from the node command, then remember that default selection.
+# Switch a proxy group to a specific node hash from the node command, then remember that default selection.
 # The --group option is required so mihoro-cli does not guess which proxy group should change.
-mihoro-cli node use <node> --group <group>
+mihoro-cli node use <node-hash> --group <group>
 
 # List proxy groups, their current selected node, and available node choices.
 mihoro-cli group list
 
-# Switch a proxy group to a specific node, then remember that default selection.
-mihoro-cli group use <group> <node>
+# Switch a proxy group to a specific node hash, then remember that default selection.
+mihoro-cli group use <group> <node-hash>
 ```
+
+Node hashes are stable per subscription and stored in the mihoro data directory. Saved group defaults are reapplied after `service start` so the preferred node selection survives restarts.
 
 ## Data
 
@@ -174,7 +204,18 @@ Override it per command:
 MIHORO_HOME=/path/to/data mihoro-cli service status
 ```
 
-mihoro-cli keeps its own `subscriptions.yaml`, `profiles/`, `mihomo.yaml`, `runtime/`, optional CLI `logs/`, and `core/`. It does not modify the Clash Party data directory during import.
+mihoro-cli keeps its own files under the data directory:
+
+- `subscriptions.yaml`: saved subscription metadata and current subscription id.
+- `profiles/`: copied or downloaded mihomo profile YAML files.
+- `mihomo.yaml`: mihoro-controlled mihomo settings such as `mixed-port`, routing mode, TUN, DNS, and GeoData URLs.
+- `runtime/config.yaml`: generated mihomo config built by merging the current profile with `mihomo.yaml`.
+- `runtime/mihomo.sock` and `runtime/mihomo.pid`: API socket and pid file for the managed mihomo process.
+- `node-indexes.json`: per-subscription node hash index and saved group selections.
+- `core/`: managed mihomo binary when no system `mihomo` executable is available.
+- `logs/`: optional CLI log directory.
+
+Importing from Clash Party reads `profile.yaml`, `profiles/`, and optional `mihomo.yaml` from the source data directory. It does not modify the Clash Party data directory. With `--overwrite`, existing mihoro target files are backed up under `backups/clash-party-import-<timestamp>/` before replacement.
 
 ## Development
 
@@ -188,8 +229,8 @@ pnpm run typecheck
 # Compile TypeScript into dist/ and prepare the executable bin file.
 pnpm run build
 
-# Create the npm tarball under dist/ without writing package artifacts to the project root.
-pnpm run pack:dist
+# Create the npm tarball under releases/ without writing package artifacts to the project root.
+pnpm run pack:release
 
 # Run the CLI directly from TypeScript during development and print help.
 pnpm run dev --help
