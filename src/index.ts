@@ -3,6 +3,12 @@
 import { Command } from 'commander'
 import { addSubscription, currentSubscription, readSubscriptions, removeSubscription } from './config/subscriptions.js'
 import { switchSubscription } from './config/subscription-switch.js'
+import {
+  hasSubscriptionUpdateFailure,
+  renderSubscriptionUpdateResults,
+  updateAllSubscriptions,
+  updateSubscription
+} from './config/subscription-update.js'
 import { generateRuntimeConfig } from './config/runtime.js'
 import { parseProxyModeKind, readControlledConfig, setGeoAutoUpdate, setGeoUpdateInterval, setProxyMode, setTunEnabled } from './config/controlled.js'
 import { assertGroupCanUseNode, listGroups, listNodesWithGroups, upgradeGeo, useGroupNode } from './mihomo/api.js'
@@ -112,6 +118,24 @@ function createProgram(): Command {
       if (restartedPid) console.log(`Mihomo restarted: ${formatRestartedService(restartedPid)}`)
     })
   )
+  sub.command('update')
+    .argument('[name-or-id]')
+    .option('-a, --all', 'update all subscriptions')
+    .option('-p, --proxy', 'update through mihomo mixed-port proxy')
+    .description('Update subscriptions')
+    .action((nameOrId: string | undefined, options: { all?: boolean; proxy?: boolean }) =>
+      run(async () => {
+        if (options.all && nameOrId) throw new MihoroError('Do not provide a subscription name when using --all.')
+        if (!options.all && !nameOrId) throw new MihoroError('Expected a subscription name or --all.')
+        const updateOptions = { useProxy: Boolean(options.proxy) }
+        const results = options.all
+          ? await updateAllSubscriptions(updateOptions)
+          : [await updateSubscription(nameOrId as string, updateOptions)]
+        console.log('Subscription update results:')
+        console.log(renderSubscriptionUpdateResults(results))
+        if (hasSubscriptionUpdateFailure(results)) process.exitCode = 1
+      })
+    )
 
   const service = program.command('service').description('Manage mihomo service')
   service.command('install').description('Install autostart service').action(() =>

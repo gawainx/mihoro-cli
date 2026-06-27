@@ -8,7 +8,7 @@
 
 ### 任务 #1: 抽出可复用订阅下载能力
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Modify `src/config/subscriptions.ts`; Verify `tests/subscription-update.test.mjs`
 
@@ -20,7 +20,7 @@
 
 ### 任务 #2: 实现订阅更新编排模块
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Create `src/config/subscription-update.ts`; Modify `src/config/subscriptions.ts`; Verify `tests/subscription-update.test.mjs`
 
@@ -32,7 +32,7 @@
 
 ### 任务 #3: 当前订阅 runtime 与 core 刷新
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Create `src/config/subscription-update.ts`; Modify as needed `src/config/subscription-switch.ts` or service helpers; Verify `tests/subscription-update.test.mjs`
 
@@ -46,7 +46,7 @@
 
 ### 任务 #4: 注册 `sub update` 命令
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Modify `src/index.ts`; Verify `tests/subscription-update.test.mjs`
 
@@ -58,7 +58,7 @@
 
 ### 任务 #5: 渲染更新结果表格与退出码
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Modify `src/index.ts`; Verify `tests/subscription-update.test.mjs`
 
@@ -72,7 +72,7 @@
 
 ### 任务 #6: 更新 README 命令说明
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Modify `README.md`
 
@@ -84,7 +84,7 @@
 
 ### 任务 #7: 最终验证与计划状态回写
 
-**Status:** Designed
+**Status:** Finished
 
 **Files:** Verify `src/config/subscription-update.ts`, `src/config/subscriptions.ts`, `src/index.ts`, `README.md`, `tests/subscription-update.test.mjs`; Modify `docs/plans/SubscriptionUpdate_20260627.md`
 

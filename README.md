@@ -103,6 +103,17 @@ mihoro-cli sub add <name> <url>
 # and restart mihomo when the managed service is already running.
 mihoro-cli sub use <name-or-id>
 
+# Update one remote subscription by name or id. By default mihoro-cli downloads directly,
+# then retries through the mihomo mixed-port proxy if the direct request fails.
+mihoro-cli sub update <name-or-id>
+
+# Update all subscriptions serially. Local or imported subscriptions without URLs are skipped,
+# and all results are shown in a table after the full pass completes.
+mihoro-cli sub update --all
+
+# Update through the mihomo mixed-port proxy immediately instead of trying direct first.
+mihoro-cli sub update <name-or-id> --proxy
+
 # Remove a subscription by name or internal id.
 mihoro-cli sub remove <name-or-id>
 ```

@@ -113,7 +113,7 @@ export function findSubscription(state: SubscriptionState, idOrName: string): Su
  * @param url Remote subscription URL.
  * @returns Parsed profile object.
  */
-async function fetchProfile(url: string): Promise<JsonMap> {
+export async function fetchProfile(url: string): Promise<JsonMap> {
   const response = await fetch(url, { headers: { 'user-agent': 'mihoro-cli/0.1.0' } })
   if (!response.ok) throw new MihoroError(`Failed to download subscription: ${response.status} ${response.statusText}`)
   const text = await response.text()
@@ -128,7 +128,7 @@ async function fetchProfile(url: string): Promise<JsonMap> {
  * @param profile Parsed profile object.
  * @returns Nothing when the profile is valid.
  */
-function validateProfile(profile: JsonMap): void {
+export function validateProfile(profile: JsonMap): void {
   if (!Array.isArray(profile.proxies) && !profile['proxy-providers']) {
     throw new MihoroError('Subscription must contain proxies or proxy-providers.')
   }
